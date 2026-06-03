@@ -1,0 +1,39 @@
+{
+  "name": "Restaurant",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do restaurante"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone"
+    },
+    "opening_hours": {
+      "type": "string",
+      "description": "Hor\u00e1rio de funcionamento (texto)"
+    },
+    "booking_window_days": {
+      "type": "number",
+      "description": "Janela de reserva em dias",
+      "default": 30
+    },
+    "tolerance_minutes": {
+      "type": "number",
+      "description": "Toler\u00e2ncia de atraso em minutos",
+      "default": 15
+    },
+    "booking_rules": {
+      "type": "string",
+      "description": "Regras e condi\u00e7\u00f5es exibidas ao cliente"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

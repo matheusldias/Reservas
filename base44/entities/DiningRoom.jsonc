@@ -1,0 +1,106 @@
+{
+  "name": "DiningRoom",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do sal\u00e3o"
+    },
+    "total_capacity": {
+      "type": "number",
+      "description": "Capacidade total do sal\u00e3o"
+    },
+    "schedule": {
+      "type": "array",
+      "description": "Grade hor\u00e1ria padr\u00e3o",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day_of_week": {
+            "type": "number",
+            "description": "0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab"
+          },
+          "time_slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start_time": {
+                  "type": "string"
+                },
+                "end_time": {
+                  "type": "string"
+                },
+                "capacity": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "special_dates": {
+      "type": "array",
+      "description": "Datas especiais com grade diferente",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "label": {
+            "type": "string"
+          },
+          "time_slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start_time": {
+                  "type": "string"
+                },
+                "end_time": {
+                  "type": "string"
+                },
+                "capacity": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "blocked_dates": {
+      "type": "array",
+      "description": "Datas bloqueadas",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "full_day": {
+            "type": "boolean"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "total_capacity"
+  ]
+}

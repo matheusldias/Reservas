@@ -1,0 +1,42 @@
+{
+  "name": "WaitlistEntry",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Telefone do cliente"
+    },
+    "party_size": {
+      "type": "number",
+      "description": "N\u00famero de pessoas"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aguardando",
+        "chamado",
+        "sentado",
+        "removido"
+      ],
+      "default": "aguardando",
+      "description": "Status na fila"
+    },
+    "position": {
+      "type": "number",
+      "description": "Posi\u00e7\u00e3o na fila"
+    },
+    "queue_paused": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a fila est\u00e1 pausada"
+    }
+  },
+  "required": [
+    "customer_name",
+    "party_size"
+  ]
+}
