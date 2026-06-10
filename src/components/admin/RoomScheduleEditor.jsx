@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Save, CalendarOff, CalendarPlus } from "lucide-react";
+import { Plus, Trash2, Save, CalendarOff, CalendarPlus, Copy, ArrowDown } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -67,6 +67,29 @@ export default function RoomScheduleEditor({ room }) {
           : s
       )
     );
+  };
+
+  const copyToAllDays = (dayIndex) => {
+    const source = schedule.find((s) => s.day_of_week === dayIndex);
+    if (!source) return;
+    setSchedule(
+      DAYS.map((_, i) => ({
+        day_of_week: i,
+        time_slots: source.time_slots.map((slot) => ({ ...slot })),
+      }))
+    );
+    toast({ title: `Horários de ${DAYS[dayIndex]} copiados para todos os dias` });
+  };
+
+  const copyToNextDay = (dayIndex) => {
+    const source = schedule.find((s) => s.day_of_week === dayIndex);
+    if (!source) return;
+    const next = (dayIndex + 1) % 7;
+    setSchedule([
+      ...schedule.filter((s) => s.day_of_week !== next),
+      { day_of_week: next, time_slots: source.time_slots.map((slot) => ({ ...slot })) },
+    ]);
+    toast({ title: `Horários copiados para ${DAYS[next]}` });
   };
 
   const removeSlot = (dayIndex, slotIndex) => {
@@ -164,14 +187,38 @@ export default function RoomScheduleEditor({ room }) {
               <div key={dayIndex} className="bg-muted/50 rounded-xl p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-foreground">{day}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => addSlotToDay(dayIndex)}
-                    className="text-xs text-primary"
-                  >
-                    <Plus className="w-3 h-3 mr-1" /> Horário
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {daySchedule?.time_slots?.length > 0 && (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Copiar para o próximo dia"
+                          onClick={() => copyToNextDay(dayIndex)}
+                          className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Copiar para todos os dias"
+                          onClick={() => copyToAllDays(dayIndex)}
+                          className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => addSlotToDay(dayIndex)}
+                      className="text-xs text-primary"
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Horário
+                    </Button>
+                  </div>
                 </div>
                 {daySchedule?.time_slots?.map((slot, slotIndex) => (
                   <div key={slotIndex} className="flex items-center gap-2 mb-2">
