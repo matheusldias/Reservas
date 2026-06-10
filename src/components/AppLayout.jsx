@@ -18,10 +18,11 @@ import { RestaurantProvider } from "@/lib/RestaurantContext";
 import RestaurantSelector from "@/components/RestaurantSelector";
 
 const adminNav = [
-  { label: "Configurações", path: "/admin/settings", icon: Settings },
+  { label: "Painel", path: "/", icon: LayoutDashboard },
   { label: "Salões", path: "/admin/rooms", icon: UtensilsCrossed },
   { label: "Ajustes de Reserva", path: "/admin/booking-settings", icon: CalendarClock },
   { label: "Relatórios", path: "/admin/reports", icon: BarChart3 },
+  { label: "Configurações", path: "/admin/settings", icon: Settings },
 ];
 
 const operatorNav = [
@@ -34,7 +35,7 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isAdmin = user?.role === "admin";
-  const navItems = isAdmin ? adminNav : operatorNav;
+  const navItems = isAdmin ? adminNav.slice(0, -1) : operatorNav;
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -131,27 +132,21 @@ export default function AppLayout() {
               <>
                 <div className="pt-4 pb-2 px-4">
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Operação
+                    Configuração
                   </p>
                 </div>
-                {operatorNav.map((item) => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <item.icon className="w-5 h-5 flex-shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
+                <Link
+                  to={adminNav[adminNav.length - 1].path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`mx-3 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    location.pathname === adminNav[adminNav.length - 1].path
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Settings className="w-5 h-5 flex-shrink-0" />
+                  <span>Configurações</span>
+                </Link>
               </>
             )}
           </nav>
