@@ -18,6 +18,7 @@ import RestaurantSettings from '@/pages/admin/RestaurantSettings';
 import DiningRooms from '@/pages/admin/DiningRooms';
 import BookingSettings from '@/pages/admin/BookingSettings';
 import Reports from '@/pages/admin/Reports';
+import Users from '@/pages/admin/Users';
 import ReservePage from '@/pages/public/ReservePage';
 import QueuePage from '@/pages/public/QueuePage';
 
@@ -58,6 +59,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/rooms" element={<DiningRooms />} />
           <Route path="/admin/booking-settings" element={<BookingSettings />} />
           <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/admin/users" element={<Users />} />
         </Route>
       </Route>
 

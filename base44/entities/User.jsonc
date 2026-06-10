@@ -2,13 +2,9 @@
   "name": "User",
   "type": "object",
   "properties": {
-    "role": {
+    "restaurant_id": {
       "type": "string",
-      "enum": [
-        "admin",
-        "operator"
-      ],
-      "default": "operator"
+      "description": "ID do restaurante ao qual o usu\u00e1rio pertence"
     }
   }
 }

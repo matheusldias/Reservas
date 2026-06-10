@@ -8,6 +8,7 @@ import {
   UtensilsCrossed,
   CalendarClock,
   BarChart3,
+  Users,
   Menu,
   X,
   LogOut,
@@ -22,6 +23,7 @@ const adminNav = [
   { label: "Salões", path: "/admin/rooms", icon: UtensilsCrossed },
   { label: "Ajustes de Reserva", path: "/admin/booking-settings", icon: CalendarClock },
   { label: "Relatórios", path: "/admin/reports", icon: BarChart3 },
+  { label: "Usuários", path: "/admin/users", icon: Users },
   { label: "Configurações", path: "/admin/settings", icon: Settings },
 ];
 
