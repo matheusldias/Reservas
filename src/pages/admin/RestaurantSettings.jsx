@@ -1,123 +1,134 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Save, Store } from "lucide-react";
+import { Store, Plus, Edit2, Trash2, CalendarClock, Users, Copy } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import RestaurantFormDialog from "@/components/admin/RestaurantFormDialog";
 
 export default function RestaurantSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   const { data: restaurants = [] } = useQuery({
-    queryKey: ["restaurant"],
+    queryKey: ["restaurants"],
     queryFn: () => base44.entities.Restaurant.list(),
   });
 
-  const restaurant = restaurants[0];
+  const refetch = () =>
+    queryClient.invalidateQueries({ queryKey: ["restaurants"] });
 
-  const [form, setForm] = useState({
-    name: "",
-    address: "",
-    phone: "",
-    opening_hours: "",
-  });
+  const handleDelete = async (r) => {
+    await base44.entities.Restaurant.delete(r.id);
+    refetch();
+    toast({ title: "Restaurante removido!" });
+  };
 
-  useEffect(() => {
-    if (restaurant) {
-      setForm({
-        name: restaurant.name || "",
-        address: restaurant.address || "",
-        phone: restaurant.phone || "",
-        opening_hours: restaurant.opening_hours || "",
-      });
-    }
-  }, [restaurant]);
-
-  const mutation = useMutation({
-    mutationFn: async (data) => {
-      if (restaurant) {
-        return base44.entities.Restaurant.update(restaurant.id, data);
-      } else {
-        return base44.entities.Restaurant.create(data);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["restaurant"] });
-      toast({ title: "Configurações salvas com sucesso!" });
-    },
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    mutation.mutate(form);
+  const copyLink = (path, label) => {
+    navigator.clipboard.writeText(`${window.location.origin}${path}`);
+    toast({ title: `Link de ${label} copiado!` });
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-          <Store className="w-6 h-6 text-primary" />
-          Configurações do Restaurante
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Informações básicas do estabelecimento
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5 max-w-lg">
-        <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
-          <div>
-            <Label>Nome do restaurante</Label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Ex: Restaurante Bela Vista"
-              className="rounded-xl mt-1"
-            />
-          </div>
-          <div>
-            <Label>Endereço</Label>
-            <Input
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-              placeholder="Rua, número, bairro, cidade"
-              className="rounded-xl mt-1"
-            />
-          </div>
-          <div>
-            <Label>Telefone</Label>
-            <Input
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="(11) 3333-4444"
-              className="rounded-xl mt-1"
-            />
-          </div>
-          <div>
-            <Label>Horário de funcionamento</Label>
-            <Textarea
-              value={form.opening_hours}
-              onChange={(e) => setForm({ ...form, opening_hours: e.target.value })}
-              placeholder="Ex: Seg-Sex 11h-23h, Sáb-Dom 11h-00h"
-              className="rounded-xl mt-1"
-              rows={2}
-            />
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
+            <Store className="w-6 h-6 text-primary" />
+            Restaurantes
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Cadastre e gerencie seus restaurantes
+          </p>
         </div>
-
         <Button
-          type="submit"
-          disabled={mutation.isPending}
+          onClick={() => {
+            setEditing(null);
+            setShowDialog(true);
+          }}
           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
         >
-          <Save className="w-4 h-4 mr-2" />
-          {mutation.isPending ? "Salvando..." : "Salvar Configurações"}
+          <Plus className="w-4 h-4 mr-1" />
+          Novo Restaurante
         </Button>
-      </form>
+      </div>
+
+      <div className="space-y-4">
+        {restaurants.map((r) => (
+          <div key={r.id} className="bg-card rounded-2xl border border-border p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-foreground">{r.name}</h3>
+                {r.address && (
+                  <p className="text-sm text-muted-foreground mt-0.5">{r.address}</p>
+                )}
+                {r.phone && (
+                  <p className="text-sm text-muted-foreground">{r.phone}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditing(r);
+                    setShowDialog(true);
+                  }}
+                >
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={() => handleDelete(r)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => copyLink(`/reservar/${r.id}`, "reserva")}
+                className="rounded-xl text-xs"
+              >
+                <CalendarClock className="w-3.5 h-3.5 mr-1 text-primary" />
+                <Copy className="w-3 h-3 mr-1" />
+                Link de Reserva
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => copyLink(`/fila/${r.id}`, "fila")}
+                className="rounded-xl text-xs"
+              >
+                <Users className="w-3.5 h-3.5 mr-1 text-primary" />
+                <Copy className="w-3 h-3 mr-1" />
+                Link da Fila
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        {restaurants.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground bg-card rounded-2xl border border-border">
+            <Store className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">Nenhum restaurante cadastrado</p>
+          </div>
+        )}
+      </div>
+
+      <RestaurantFormDialog
+        open={showDialog}
+        onClose={() => setShowDialog(false)}
+        restaurant={editing}
+        onSaved={refetch}
+      />
     </div>
   );
 }

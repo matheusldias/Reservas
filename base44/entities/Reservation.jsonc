@@ -2,6 +2,10 @@
   "name": "Reservation",
   "type": "object",
   "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "ID do restaurante"
+    },
     "customer_name": {
       "type": "string",
       "description": "Nome do cliente"

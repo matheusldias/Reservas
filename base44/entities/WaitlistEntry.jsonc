@@ -2,6 +2,10 @@
   "name": "WaitlistEntry",
   "type": "object",
   "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "ID do restaurante"
+    },
     "customer_name": {
       "type": "string",
       "description": "Nome do cliente"
@@ -28,11 +32,6 @@
     "position": {
       "type": "number",
       "description": "Posi\u00e7\u00e3o na fila"
-    },
-    "queue_paused": {
-      "type": "boolean",
-      "default": false,
-      "description": "Se a fila est\u00e1 pausada"
     }
   },
   "required": [
