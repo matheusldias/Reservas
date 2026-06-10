@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
-export default function AddWaitlistDialog({ open, onClose, onSuccess }) {
+export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurantId }) {
   const [form, setForm] = useState({
     customer_name: "",
     customer_phone: "",
@@ -25,6 +25,7 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess }) {
       ...form,
       party_size: Number(form.party_size),
       status: "aguardando",
+      restaurant_id: restaurantId,
     });
     setSaving(false);
     setForm({ customer_name: "", customer_phone: "", party_size: 2 });

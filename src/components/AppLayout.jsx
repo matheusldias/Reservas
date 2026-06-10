@@ -14,6 +14,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RestaurantProvider } from "@/lib/RestaurantContext";
+import RestaurantSelector from "@/components/RestaurantSelector";
 
 const adminNav = [
   { label: "Configurações", path: "/admin/settings", icon: Settings },
@@ -39,6 +41,7 @@ export default function AppLayout() {
   };
 
   return (
+    <RestaurantProvider>
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="sticky top-0 z-50 bg-card border-b border-border px-4 py-3 flex items-center justify-between lg:hidden">
@@ -95,6 +98,11 @@ export default function AppLayout() {
             >
               <X className="w-5 h-5" />
             </Button>
+          </div>
+
+          {/* Restaurant Selector */}
+          <div className="px-4 pb-4">
+            <RestaurantSelector />
           </div>
 
           {/* Nav */}
@@ -184,5 +192,6 @@ export default function AppLayout() {
         </div>
       </main>
     </div>
+    </RestaurantProvider>
   );
 }

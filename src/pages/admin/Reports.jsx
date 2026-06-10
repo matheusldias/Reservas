@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useRestaurant } from "@/lib/RestaurantContext";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart3, CalendarCheck, Users, UserX } from "lucide-react";
@@ -8,10 +9,17 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 export default function Reports() {
   const [days, setDays] = useState(7);
+  const { restaurant } = useRestaurant();
 
   const { data: reservations = [] } = useQuery({
-    queryKey: ["all-reservations"],
-    queryFn: () => base44.entities.Reservation.list("-date", 500),
+    queryKey: ["all-reservations", restaurant?.id],
+    queryFn: () =>
+      base44.entities.Reservation.filter(
+        { restaurant_id: restaurant.id },
+        "-date",
+        500
+      ),
+    enabled: !!restaurant,
   });
 
   const stats = useMemo(() => {

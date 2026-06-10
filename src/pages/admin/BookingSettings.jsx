@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useRestaurant } from "@/lib/RestaurantContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,14 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 export default function BookingSettings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const { data: restaurants = [] } = useQuery({
-    queryKey: ["restaurant"],
-    queryFn: () => base44.entities.Restaurant.list(),
-  });
-
-  const restaurant = restaurants[0];
+  const { restaurant, refetchRestaurants } = useRestaurant();
 
   const [form, setForm] = useState({
     booking_window_days: 30,
@@ -36,15 +30,10 @@ export default function BookingSettings() {
   }, [restaurant]);
 
   const mutation = useMutation({
-    mutationFn: async (data) => {
-      if (restaurant) {
-        return base44.entities.Restaurant.update(restaurant.id, data);
-      } else {
-        return base44.entities.Restaurant.create({ name: "Meu Restaurante", ...data });
-      }
-    },
+    mutationFn: async (data) =>
+      base44.entities.Restaurant.update(restaurant.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["restaurant"] });
+      refetchRestaurants();
       toast({ title: "Ajustes salvos!" });
     },
   });
@@ -67,6 +56,7 @@ export default function BookingSettings() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Defina a janela de reservas, tolerância e regras
+          {restaurant ? ` · ${restaurant.name}` : ""}
         </p>
       </div>
 

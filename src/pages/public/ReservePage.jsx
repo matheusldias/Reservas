@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -26,15 +27,17 @@ export default function ReservePage() {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
+  const { restaurantId } = useParams();
+
   const { data: restaurants = [] } = useQuery({
-    queryKey: ["public-restaurant"],
-    queryFn: () => base44.entities.Restaurant.list(),
+    queryKey: ["public-restaurant", restaurantId],
+    queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }),
   });
   const restaurant = restaurants[0];
 
   const { data: rooms = [] } = useQuery({
-    queryKey: ["public-rooms"],
-    queryFn: () => base44.entities.DiningRoom.list(),
+    queryKey: ["public-rooms", restaurantId],
+    queryFn: () => base44.entities.DiningRoom.filter({ restaurant_id: restaurantId }),
   });
 
   const room = rooms.find((r) => r.id === roomId);
@@ -57,6 +60,7 @@ export default function ReservePage() {
       party_size: Number(partySize),
       dining_room_id: roomId,
       status: "aguardando",
+      restaurant_id: restaurantId,
     });
     setSaving(false);
     setDone(true);

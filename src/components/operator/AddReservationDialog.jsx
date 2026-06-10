@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-export default function AddReservationDialog({ open, onClose, onSuccess }) {
+export default function AddReservationDialog({ open, onClose, onSuccess, restaurantId }) {
   const [form, setForm] = useState({
     customer_name: "",
     customer_phone: "",
@@ -30,6 +30,7 @@ export default function AddReservationDialog({ open, onClose, onSuccess }) {
       ...form,
       party_size: Number(form.party_size),
       status: "aguardando",
+      restaurant_id: restaurantId,
     });
     setSaving(false);
     setForm({

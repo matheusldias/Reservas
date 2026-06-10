@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import RoomScheduleEditor from "@/components/admin/RoomScheduleEditor";
+import { useRestaurant } from "@/lib/RestaurantContext";
 
 export default function DiningRooms() {
   const { toast } = useToast();
@@ -29,9 +30,13 @@ export default function DiningRooms() {
   const [expandedRoom, setExpandedRoom] = useState(null);
   const [form, setForm] = useState({ name: "", type: "interno", total_capacity: "" });
 
+  const { restaurant } = useRestaurant();
+
   const { data: rooms = [] } = useQuery({
-    queryKey: ["dining-rooms"],
-    queryFn: () => base44.entities.DiningRoom.list(),
+    queryKey: ["dining-rooms", restaurant?.id],
+    queryFn: () =>
+      base44.entities.DiningRoom.filter({ restaurant_id: restaurant.id }),
+    enabled: !!restaurant,
   });
 
   const createMutation = useMutation({
@@ -65,7 +70,11 @@ export default function DiningRooms() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = { ...form, total_capacity: Number(form.total_capacity) };
+    const data = {
+      ...form,
+      total_capacity: Number(form.total_capacity),
+      restaurant_id: restaurant.id,
+    };
     if (editing) {
       updateMutation.mutate({ id: editing.id, data });
     } else {

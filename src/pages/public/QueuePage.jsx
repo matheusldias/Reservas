@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,17 +15,25 @@ export default function QueuePage() {
   const [saving, setSaving] = useState(false);
   const [position, setPosition] = useState(null);
 
+  const { restaurantId } = useParams();
+
   const { data: restaurants = [] } = useQuery({
-    queryKey: ["public-restaurant"],
-    queryFn: () => base44.entities.Restaurant.list(),
+    queryKey: ["public-restaurant", restaurantId],
+    queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }),
   });
   const restaurant = restaurants[0];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const waiting = await base44.entities.WaitlistEntry.filter({ status: "aguardando" });
-    const called = await base44.entities.WaitlistEntry.filter({ status: "chamado" });
+    const waiting = await base44.entities.WaitlistEntry.filter({
+      status: "aguardando",
+      restaurant_id: restaurantId,
+    });
+    const called = await base44.entities.WaitlistEntry.filter({
+      status: "chamado",
+      restaurant_id: restaurantId,
+    });
     const newPosition = waiting.length + called.length + 1;
     await base44.entities.WaitlistEntry.create({
       customer_name: name,
@@ -32,6 +41,7 @@ export default function QueuePage() {
       party_size: Number(partySize),
       status: "aguardando",
       position: newPosition,
+      restaurant_id: restaurantId,
     });
     setSaving(false);
     setPosition(newPosition);

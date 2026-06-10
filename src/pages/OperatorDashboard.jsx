@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useRestaurant } from "@/lib/RestaurantContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,41 +19,44 @@ export default function OperatorDashboard() {
   const [showAddReservation, setShowAddReservation] = useState(false);
   const [showAddWaitlist, setShowAddWaitlist] = useState(false);
 
-  const { data: restaurants = [], refetch: refetchRestaurant } = useQuery({
-    queryKey: ["restaurant"],
-    queryFn: () => base44.entities.Restaurant.list(),
-  });
-  const restaurant = restaurants[0];
+  const { restaurant, refetchRestaurants } = useRestaurant();
 
   const toggleQueuePause = async () => {
     if (!restaurant) return;
     await base44.entities.Restaurant.update(restaurant.id, {
       queue_paused: !restaurant.queue_paused,
     });
-    refetchRestaurant();
+    refetchRestaurants();
   };
 
   const { data: reservations = [], refetch: refetchReservations } = useQuery({
-    queryKey: ["reservations", selectedDate],
-    queryFn: () => base44.entities.Reservation.filter({ date: selectedDate }),
+    queryKey: ["reservations", selectedDate, restaurant?.id],
+    queryFn: () =>
+      base44.entities.Reservation.filter({
+        date: selectedDate,
+        restaurant_id: restaurant.id,
+      }),
+    enabled: !!restaurant,
   });
 
   const { data: waitlist = [], refetch: refetchWaitlist } = useQuery({
-    queryKey: ["waitlist"],
+    queryKey: ["waitlist", restaurant?.id],
     queryFn: () => base44.entities.WaitlistEntry.filter(
-      { status: "aguardando" },
+      { status: "aguardando", restaurant_id: restaurant.id },
       "created_date",
       100
     ),
+    enabled: !!restaurant,
   });
 
   const { data: calledWaitlist = [], refetch: refetchCalled } = useQuery({
-    queryKey: ["waitlist-called"],
+    queryKey: ["waitlist-called", restaurant?.id],
     queryFn: () => base44.entities.WaitlistEntry.filter(
-      { status: "chamado" },
+      { status: "chamado", restaurant_id: restaurant.id },
       "created_date",
       100
     ),
+    enabled: !!restaurant,
   });
 
   const allActiveWaitlist = [...waitlist, ...calledWaitlist].sort(
@@ -194,11 +198,13 @@ export default function OperatorDashboard() {
         open={showAddReservation}
         onClose={() => setShowAddReservation(false)}
         onSuccess={refetchAll}
+        restaurantId={restaurant?.id}
       />
       <AddWaitlistDialog
         open={showAddWaitlist}
         onClose={() => setShowAddWaitlist(false)}
         onSuccess={refetchAll}
+        restaurantId={restaurant?.id}
       />
     </div>
   );

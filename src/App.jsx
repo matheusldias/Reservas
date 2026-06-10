@@ -48,8 +48,8 @@ const AuthenticatedApp = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      <Route path="/reservar" element={<ReservePage />} />
-      <Route path="/fila" element={<QueuePage />} />
+      <Route path="/reservar/:restaurantId" element={<ReservePage />} />
+      <Route path="/fila/:restaurantId" element={<QueuePage />} />
 
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
