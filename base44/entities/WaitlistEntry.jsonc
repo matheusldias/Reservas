@@ -14,9 +14,22 @@
       "type": "string",
       "description": "Telefone do cliente"
     },
+    "customer_email": {
+      "type": "string",
+      "description": "E-mail do cliente"
+    },
     "party_size": {
       "type": "number",
       "description": "N\u00famero de pessoas"
+    },
+    "priority": {
+      "type": "boolean",
+      "default": false,
+      "description": "Atendimento priorit\u00e1rio"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Mais informa\u00e7\u00f5es"
     },
     "status": {
       "type": "string",

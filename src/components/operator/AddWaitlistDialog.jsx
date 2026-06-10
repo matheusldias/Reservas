@@ -9,13 +9,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+
+const emptyForm = {
+  customer_name: "",
+  customer_phone: "",
+  customer_email: "",
+  party_size: 2,
+  priority: false,
+  notes: "",
+};
 
 export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurantId }) {
-  const [form, setForm] = useState({
-    customer_name: "",
-    customer_phone: "",
-    party_size: 2,
-  });
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -23,44 +30,65 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurant
     setSaving(true);
     await base44.entities.WaitlistEntry.create({
       ...form,
+      customer_phone: form.customer_phone ? `+55${form.customer_phone.replace(/\D/g, "")}` : "",
       party_size: Number(form.party_size),
       status: "aguardando",
       restaurant_id: restaurantId,
     });
     setSaving(false);
-    setForm({ customer_name: "", customer_phone: "", party_size: 2 });
+    setForm(emptyForm);
     onSuccess();
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-heading text-lg">Adicionar à Fila</DialogTitle>
+          <DialogTitle className="font-heading text-lg">Adicionar Cliente</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label>Nome do cliente *</Label>
+            <Label>
+              <span className="text-destructive">*</span> Nome
+            </Label>
             <Input
               required
               value={form.customer_name}
               onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
-              placeholder="Nome completo"
+              placeholder="Nome do cliente"
               className="rounded-xl mt-1"
             />
           </div>
           <div>
             <Label>Telefone</Label>
+            <div className="flex items-center mt-1">
+              <span className="flex items-center gap-1 h-9 px-3 border border-input border-r-0 rounded-l-xl bg-muted text-sm text-muted-foreground">
+                🇧🇷 +55
+              </span>
+              <Input
+                type="tel"
+                value={form.customer_phone}
+                onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
+                placeholder="(11) 99999-9999"
+                className="rounded-r-xl rounded-l-none"
+              />
+            </div>
+          </div>
+          <div>
+            <Label>E-mail</Label>
             <Input
-              value={form.customer_phone}
-              onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
-              placeholder="(11) 99999-9999"
+              type="email"
+              value={form.customer_email}
+              onChange={(e) => setForm({ ...form, customer_email: e.target.value })}
+              placeholder="E-mail"
               className="rounded-xl mt-1"
             />
           </div>
           <div>
-            <Label>Nº de pessoas *</Label>
+            <Label>
+              <span className="text-destructive">*</span> Pessoas
+            </Label>
             <Input
               type="number"
               required
@@ -68,6 +96,23 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurant
               value={form.party_size}
               onChange={(e) => setForm({ ...form, party_size: e.target.value })}
               className="rounded-xl mt-1"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={form.priority}
+              onCheckedChange={(checked) => setForm({ ...form, priority: checked })}
+            />
+            <Label className="cursor-pointer" onClick={() => setForm({ ...form, priority: !form.priority })}>
+              Atendimento prioritário
+            </Label>
+          </div>
+          <div>
+            <Label>Mais informações</Label>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="rounded-xl mt-1 h-20"
             />
           </div>
           <Button
