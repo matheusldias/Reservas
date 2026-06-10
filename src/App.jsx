@@ -20,6 +20,7 @@ import BookingSettings from '@/pages/admin/BookingSettings';
 import Reports from '@/pages/admin/Reports';
 import Users from '@/pages/admin/Users';
 import ReservePage from '@/pages/public/ReservePage';
+import ChooseRestaurantPage from '@/pages/public/ChooseRestaurantPage';
 import QueuePage from '@/pages/public/QueuePage';
 
 const AuthenticatedApp = () => {
@@ -49,6 +50,7 @@ const AuthenticatedApp = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
+      <Route path="/reservar" element={<ChooseRestaurantPage />} />
       <Route path="/reservar/:restaurantId" element={<ReservePage />} />
       <Route path="/fila/:restaurantId" element={<QueuePage />} />
 

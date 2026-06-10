@@ -11,6 +11,7 @@ import ReservationList from "@/components/operator/ReservationList";
 import WaitlistList from "@/components/operator/WaitlistList";
 import AddReservationDialog from "@/components/operator/AddReservationDialog";
 import AddWaitlistDialog from "@/components/operator/AddWaitlistDialog";
+import ShareLinks from "@/components/operator/ShareLinks";
 
 export default function OperatorDashboard() {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -114,6 +115,9 @@ export default function OperatorDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Links para clientes */}
+      <ShareLinks restaurant={restaurant} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
