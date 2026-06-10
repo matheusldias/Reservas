@@ -18,6 +18,8 @@ import RestaurantSettings from '@/pages/admin/RestaurantSettings';
 import DiningRooms from '@/pages/admin/DiningRooms';
 import BookingSettings from '@/pages/admin/BookingSettings';
 import Reports from '@/pages/admin/Reports';
+import ReservePage from '@/pages/public/ReservePage';
+import QueuePage from '@/pages/public/QueuePage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -45,6 +47,9 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      <Route path="/reservar" element={<ReservePage />} />
+      <Route path="/fila" element={<QueuePage />} />
 
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
