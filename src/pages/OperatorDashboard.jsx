@@ -5,13 +5,14 @@ import { useRestaurant } from "@/lib/RestaurantContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarClock, Users, Plus, Pause, Play } from "lucide-react";
+import { CalendarClock, Users, Plus, Pause, Play, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReservationList from "@/components/operator/ReservationList";
 import WaitlistList from "@/components/operator/WaitlistList";
 import AddReservationDialog from "@/components/operator/AddReservationDialog";
 import AddWaitlistDialog from "@/components/operator/AddWaitlistDialog";
 import ShareLinks from "@/components/operator/ShareLinks";
+import ReservationCalendarDialog from "@/components/operator/ReservationCalendarDialog";
 
 export default function OperatorDashboard() {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -19,6 +20,7 @@ export default function OperatorDashboard() {
   const [activeTab, setActiveTab] = useState("reservations");
   const [showAddReservation, setShowAddReservation] = useState(false);
   const [showAddWaitlist, setShowAddWaitlist] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const { restaurant, refetchRestaurants } = useRestaurant();
 
@@ -152,13 +154,21 @@ export default function OperatorDashboard() {
         </div>
 
         <TabsContent value="reservations" className="mt-4">
-          <div className="mb-4">
+          <div className="mb-4 flex items-center gap-2">
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground"
             />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCalendar(true)}
+              className="rounded-xl text-xs h-[38px]"
+            >
+              <CalendarDays className="w-4 h-4 mr-1" /> Calendário
+            </Button>
           </div>
           <ReservationList
             reservations={reservations}
@@ -209,6 +219,15 @@ export default function OperatorDashboard() {
         onClose={() => setShowAddWaitlist(false)}
         onSuccess={refetchAll}
         restaurantId={restaurant?.id}
+      />
+      <ReservationCalendarDialog
+        open={showCalendar}
+        onClose={() => setShowCalendar(false)}
+        restaurantId={restaurant?.id}
+        onSelectDate={(date) => {
+          setSelectedDate(date);
+          setActiveTab("reservations");
+        }}
       />
     </div>
   );
