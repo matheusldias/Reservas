@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarClock, Users, Plus } from "lucide-react";
+import { CalendarClock, Users, Plus, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReservationList from "@/components/operator/ReservationList";
 import WaitlistList from "@/components/operator/WaitlistList";
@@ -17,6 +17,20 @@ export default function OperatorDashboard() {
   const [activeTab, setActiveTab] = useState("reservations");
   const [showAddReservation, setShowAddReservation] = useState(false);
   const [showAddWaitlist, setShowAddWaitlist] = useState(false);
+
+  const { data: restaurants = [], refetch: refetchRestaurant } = useQuery({
+    queryKey: ["restaurant"],
+    queryFn: () => base44.entities.Restaurant.list(),
+  });
+  const restaurant = restaurants[0];
+
+  const toggleQueuePause = async () => {
+    if (!restaurant) return;
+    await base44.entities.Restaurant.update(restaurant.id, {
+      queue_paused: !restaurant.queue_paused,
+    });
+    refetchRestaurant();
+  };
 
   const { data: reservations = [], refetch: refetchReservations } = useQuery({
     queryKey: ["reservations", selectedDate],
@@ -145,6 +159,33 @@ export default function OperatorDashboard() {
         </TabsContent>
 
         <TabsContent value="waitlist" className="mt-4">
+          <div className="mb-4">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={toggleQueuePause}
+              className={`rounded-xl text-xs ${
+                restaurant?.queue_paused
+                  ? "border-green-300 text-green-600 hover:bg-green-50"
+                  : "border-primary/30 text-primary hover:bg-accent"
+              }`}
+            >
+              {restaurant?.queue_paused ? (
+                <>
+                  <Play className="w-3.5 h-3.5 mr-1" /> Retomar Fila
+                </>
+              ) : (
+                <>
+                  <Pause className="w-3.5 h-3.5 mr-1" /> Pausar Fila
+                </>
+              )}
+            </Button>
+          </div>
+          {restaurant?.queue_paused && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-xl px-4 py-3">
+              A fila está pausada. Novas entradas estão suspensas.
+            </div>
+          )}
           <WaitlistList entries={allActiveWaitlist} onUpdate={refetchAll} />
         </TabsContent>
       </Tabs>

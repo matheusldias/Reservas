@@ -6,6 +6,17 @@
       "type": "string",
       "description": "Nome do sal\u00e3o"
     },
+    "type": {
+      "type": "string",
+      "enum": [
+        "interno",
+        "externo",
+        "varanda",
+        "privativo"
+      ],
+      "default": "interno",
+      "description": "Tipo de sal\u00e3o"
+    },
     "total_capacity": {
       "type": "number",
       "description": "Capacidade total do sal\u00e3o"

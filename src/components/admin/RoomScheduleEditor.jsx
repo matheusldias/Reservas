@@ -82,7 +82,60 @@ export default function RoomScheduleEditor({ room }) {
   };
 
   const addBlockedDate = () => {
-    setBlockedDates([...blockedDates, { date: "", reason: "", full_day: true }]);
+    setBlockedDates([...blockedDates, { date: "", reason: "", full_day: true, start_time: "", end_time: "" }]);
+  };
+
+  const updateBlockedDate = (i, field, value) => {
+    const updated = [...blockedDates];
+    updated[i] = { ...updated[i], [field]: value };
+    setBlockedDates(updated);
+  };
+
+  const addSpecialDate = () => {
+    setSpecialDates([
+      ...specialDates,
+      { date: "", label: "", time_slots: [{ start_time: "12:00", end_time: "14:00", capacity: room.total_capacity }] },
+    ]);
+  };
+
+  const updateSpecialDate = (i, field, value) => {
+    const updated = [...specialDates];
+    updated[i] = { ...updated[i], [field]: value };
+    setSpecialDates(updated);
+  };
+
+  const addSpecialSlot = (i) => {
+    const updated = [...specialDates];
+    updated[i] = {
+      ...updated[i],
+      time_slots: [
+        ...(updated[i].time_slots || []),
+        { start_time: "12:00", end_time: "14:00", capacity: room.total_capacity },
+      ],
+    };
+    setSpecialDates(updated);
+  };
+
+  const updateSpecialSlot = (i, slotIndex, field, value) => {
+    const updated = [...specialDates];
+    updated[i] = {
+      ...updated[i],
+      time_slots: updated[i].time_slots.map((slot, j) =>
+        j === slotIndex
+          ? { ...slot, [field]: field === "capacity" ? Number(value) : value }
+          : slot
+      ),
+    };
+    setSpecialDates(updated);
+  };
+
+  const removeSpecialSlot = (i, slotIndex) => {
+    const updated = [...specialDates];
+    updated[i] = {
+      ...updated[i],
+      time_slots: updated[i].time_slots.filter((_, j) => j !== slotIndex),
+    };
+    setSpecialDates(updated);
   };
 
   const handleSave = () => {
@@ -94,6 +147,9 @@ export default function RoomScheduleEditor({ room }) {
       <TabsList className="bg-muted rounded-xl p-1 h-auto mb-4">
         <TabsTrigger value="schedule" className="rounded-lg text-xs px-3 py-1.5">
           Grade Horária
+        </TabsTrigger>
+        <TabsTrigger value="special" className="rounded-lg text-xs px-3 py-1.5">
+          Datas Especiais
         </TabsTrigger>
         <TabsTrigger value="blocked" className="rounded-lg text-xs px-3 py-1.5">
           Bloqueios
@@ -164,38 +220,134 @@ export default function RoomScheduleEditor({ room }) {
         </div>
       </TabsContent>
 
+      <TabsContent value="special">
+        <div className="space-y-3">
+          {specialDates.map((sd, i) => (
+            <div key={i} className="bg-muted/50 rounded-xl p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={sd.date}
+                  onChange={(e) => updateSpecialDate(i, "date", e.target.value)}
+                  className="rounded-lg text-xs h-8 w-36"
+                />
+                <Input
+                  value={sd.label || ""}
+                  onChange={(e) => updateSpecialDate(i, "label", e.target.value)}
+                  placeholder="Ex: Dia dos Namorados"
+                  className="rounded-lg text-xs h-8 flex-1"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive"
+                  onClick={() => setSpecialDates(specialDates.filter((_, j) => j !== i))}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+              {(sd.time_slots || []).map((slot, slotIndex) => (
+                <div key={slotIndex} className="flex items-center gap-2 pl-2">
+                  <Input
+                    type="time"
+                    value={slot.start_time}
+                    onChange={(e) => updateSpecialSlot(i, slotIndex, "start_time", e.target.value)}
+                    className="rounded-lg text-xs h-8 w-24"
+                  />
+                  <span className="text-muted-foreground text-xs">até</span>
+                  <Input
+                    type="time"
+                    value={slot.end_time}
+                    onChange={(e) => updateSpecialSlot(i, slotIndex, "end_time", e.target.value)}
+                    className="rounded-lg text-xs h-8 w-24"
+                  />
+                  <Input
+                    type="number"
+                    value={slot.capacity}
+                    onChange={(e) => updateSpecialSlot(i, slotIndex, "capacity", e.target.value)}
+                    className="rounded-lg text-xs h-8 w-16"
+                    placeholder="Cap."
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => removeSpecialSlot(i, slotIndex)}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => addSpecialSlot(i)}
+                className="text-xs text-primary"
+              >
+                <Plus className="w-3 h-3 mr-1" /> Horário
+              </Button>
+            </div>
+          ))}
+          <Button size="sm" variant="outline" onClick={addSpecialDate} className="text-xs rounded-xl">
+            <CalendarPlus className="w-3 h-3 mr-1" /> Adicionar Data Especial
+          </Button>
+        </div>
+      </TabsContent>
+
       <TabsContent value="blocked">
         <div className="space-y-3">
           {blockedDates.map((bd, i) => (
-            <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-xl p-3">
-              <Input
-                type="date"
-                value={bd.date}
-                onChange={(e) => {
-                  const updated = [...blockedDates];
-                  updated[i] = { ...updated[i], date: e.target.value };
-                  setBlockedDates(updated);
-                }}
-                className="rounded-lg text-xs h-8"
-              />
-              <Input
-                value={bd.reason}
-                onChange={(e) => {
-                  const updated = [...blockedDates];
-                  updated[i] = { ...updated[i], reason: e.target.value };
-                  setBlockedDates(updated);
-                }}
-                placeholder="Motivo"
-                className="rounded-lg text-xs h-8"
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-destructive"
-                onClick={() => setBlockedDates(blockedDates.filter((_, j) => j !== i))}
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
+            <div key={i} className="bg-muted/50 rounded-xl p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={bd.date}
+                  onChange={(e) => updateBlockedDate(i, "date", e.target.value)}
+                  className="rounded-lg text-xs h-8 w-36"
+                />
+                <Input
+                  value={bd.reason}
+                  onChange={(e) => updateBlockedDate(i, "reason", e.target.value)}
+                  placeholder="Motivo"
+                  className="rounded-lg text-xs h-8 flex-1"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive"
+                  onClick={() => setBlockedDates(blockedDates.filter((_, j) => j !== i))}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-3 pl-2">
+                <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={bd.full_day !== false}
+                    onChange={(e) => updateBlockedDate(i, "full_day", e.target.checked)}
+                    className="accent-[#F97316]"
+                  />
+                  Dia inteiro
+                </label>
+                {bd.full_day === false && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={bd.start_time || ""}
+                      onChange={(e) => updateBlockedDate(i, "start_time", e.target.value)}
+                      className="rounded-lg text-xs h-8 w-24"
+                    />
+                    <span className="text-muted-foreground text-xs">até</span>
+                    <Input
+                      type="time"
+                      value={bd.end_time || ""}
+                      onChange={(e) => updateBlockedDate(i, "end_time", e.target.value)}
+                      className="rounded-lg text-xs h-8 w-24"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           ))}
           <Button size="sm" variant="outline" onClick={addBlockedDate} className="text-xs rounded-xl">

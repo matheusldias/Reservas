@@ -12,6 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import RoomScheduleEditor from "@/components/admin/RoomScheduleEditor";
 
 export default function DiningRooms() {
@@ -20,7 +27,7 @@ export default function DiningRooms() {
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
   const [expandedRoom, setExpandedRoom] = useState(null);
-  const [form, setForm] = useState({ name: "", total_capacity: "" });
+  const [form, setForm] = useState({ name: "", type: "interno", total_capacity: "" });
 
   const { data: rooms = [] } = useQuery({
     queryKey: ["dining-rooms"],
@@ -33,7 +40,7 @@ export default function DiningRooms() {
       queryClient.invalidateQueries({ queryKey: ["dining-rooms"] });
       toast({ title: "Salão criado!" });
       setShowDialog(false);
-      setForm({ name: "", total_capacity: "" });
+      setForm({ name: "", type: "interno", total_capacity: "" });
     },
   });
 
@@ -44,7 +51,7 @@ export default function DiningRooms() {
       toast({ title: "Salão atualizado!" });
       setShowDialog(false);
       setEditing(null);
-      setForm({ name: "", total_capacity: "" });
+      setForm({ name: "", type: "interno", total_capacity: "" });
     },
   });
 
@@ -68,7 +75,7 @@ export default function DiningRooms() {
 
   const openEdit = (room) => {
     setEditing(room);
-    setForm({ name: room.name, total_capacity: room.total_capacity });
+    setForm({ name: room.name, type: room.type || "interno", total_capacity: room.total_capacity });
     setShowDialog(true);
   };
 
@@ -87,7 +94,7 @@ export default function DiningRooms() {
         <Button
           onClick={() => {
             setEditing(null);
-            setForm({ name: "", total_capacity: "" });
+            setForm({ name: "", type: "interno", total_capacity: "" });
             setShowDialog(true);
           }}
           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
@@ -108,8 +115,8 @@ export default function DiningRooms() {
             >
               <div>
                 <h3 className="font-semibold text-foreground">{room.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Capacidade: {room.total_capacity} pessoas
+                <p className="text-sm text-muted-foreground capitalize">
+                  {room.type || "interno"} · Capacidade: {room.total_capacity} pessoas
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -174,6 +181,23 @@ export default function DiningRooms() {
                 placeholder="Ex: Salão Principal"
                 className="rounded-xl mt-1"
               />
+            </div>
+            <div>
+              <Label>Tipo de salão</Label>
+              <Select
+                value={form.type}
+                onValueChange={(value) => setForm({ ...form, type: value })}
+              >
+                <SelectTrigger className="rounded-xl mt-1">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="interno">Interno</SelectItem>
+                  <SelectItem value="externo">Externo</SelectItem>
+                  <SelectItem value="varanda">Varanda</SelectItem>
+                  <SelectItem value="privativo">Privativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Capacidade total *</Label>
