@@ -1,6 +1,6 @@
 import React from "react";
 import { base44 } from "@/api/base44Client";
-import { Users, Phone, Bell, Armchair, X } from "lucide-react";
+import { Users, Phone, Bell, Armchair, X, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,6 +9,17 @@ export default function WaitlistList({ entries, onUpdate }) {
   const handleStatus = async (id, newStatus) => {
     await base44.entities.WaitlistEntry.update(id, { status: newStatus });
     onUpdate();
+  };
+
+  const handleCall = async (entry) => {
+    await handleStatus(entry.id, "chamado");
+    if (entry.customer_phone) {
+      const phone = entry.customer_phone.replace(/\D/g, "");
+      const message = encodeURIComponent(
+        `Olá ${entry.customer_name}! 🎉 Sua vez chegou! Sua mesa para ${entry.party_size} pessoa(s) está pronta. Por favor, dirija-se à recepção.`
+      );
+      window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+    }
   };
 
   if (entries.length === 0) {
@@ -79,11 +90,21 @@ export default function WaitlistList({ entries, onUpdate }) {
                   {!isCalled && (
                     <Button
                       size="sm"
-                      onClick={() => handleStatus(entry.id, "chamado")}
+                      onClick={() => handleCall(entry)}
                       className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs"
                     >
                       <Bell className="w-3.5 h-3.5 mr-1" />
                       Mesa Pronta
+                    </Button>
+                  )}
+                  {isCalled && entry.customer_phone && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleCall(entry)}
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                      WhatsApp
                     </Button>
                   )}
                   <Button
