@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Users, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { sortQueue } from "@/lib/queue";
+import { sortQueue, parseDbDate } from "@/lib/queue";
 
 const statusConfig = {
   aguardando: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -64,7 +64,7 @@ export default function WaitlistHistory({ restaurantId }) {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {format(new Date(entry.created_date), "HH:mm")}
+                      {format(parseDbDate(entry.created_date), "HH:mm")}
                     </span>
                     {entry.removal_reason && (
                       <span className="truncate">Motivo: {entry.removal_reason}</span>

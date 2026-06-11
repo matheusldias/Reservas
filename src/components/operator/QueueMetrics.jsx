@@ -1,21 +1,19 @@
 import React from "react";
 import { Users, Hourglass, Timer, AlertTriangle } from "lucide-react";
+import { parseDbDate } from "@/lib/queue";
 
 export default function QueueMetrics({ entries }) {
   const waiting = entries.filter((e) => e.status === "aguardando");
   const totalPeople = waiting.reduce((sum, e) => sum + (e.party_size || 0), 0);
   const noShows = entries.filter((e) => e.status === "no_show").length;
 
-  const seated = entries.filter((e) => e.status === "sentado" && e.seated_at);
+  const seatedWaits = entries
+    .filter((e) => e.status === "sentado" && e.seated_at)
+    .map((e) => (parseDbDate(e.seated_at) - parseDbDate(e.created_date)) / 60000)
+    .filter((m) => m >= 0);
   const avgWait =
-    seated.length > 0
-      ? Math.round(
-          seated.reduce(
-            (sum, e) =>
-              sum + (new Date(e.seated_at) - new Date(e.created_date)) / 60000,
-            0
-          ) / seated.length
-        )
+    seatedWaits.length > 0
+      ? Math.round(seatedWaits.reduce((sum, m) => sum + m, 0) / seatedWaits.length)
       : null;
 
   const metrics = [

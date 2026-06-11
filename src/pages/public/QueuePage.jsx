@@ -5,16 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, PauseCircle } from "lucide-react";
+import { PauseCircle } from "lucide-react";
 import { format } from "date-fns";
 import PublicHeader from "@/components/public/PublicHeader";
+import QueueStatusCard from "@/components/public/QueueStatusCard";
+import { sortQueue } from "@/lib/queue";
 
 export default function QueuePage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [partySize, setPartySize] = useState("2");
   const [saving, setSaving] = useState(false);
-  const [position, setPosition] = useState(null);
+  const [entryId, setEntryId] = useState(null);
 
   const { restaurantId } = useParams();
 
@@ -24,17 +26,35 @@ export default function QueuePage() {
   });
   const restaurant = restaurants[0];
 
+  const { data: myEntries = [] } = useQuery({
+    queryKey: ["queue-my-entry", entryId],
+    queryFn: () => base44.entities.WaitlistEntry.filter({ id: entryId }),
+    enabled: !!entryId,
+    refetchInterval: 7000,
+  });
+  const myEntry = myEntries[0];
+
+  const { data: waitingList = [] } = useQuery({
+    queryKey: ["queue-waiting", restaurantId, myEntry?.service_date],
+    queryFn: () =>
+      base44.entities.WaitlistEntry.filter({
+        status: "aguardando",
+        restaurant_id: restaurantId,
+        service_date: myEntry.service_date,
+      }),
+    enabled: !!myEntry && myEntry.status === "aguardando",
+    refetchInterval: 7000,
+  });
+
+  const myPosition = myEntry
+    ? sortQueue(waitingList).findIndex((e) => e.id === myEntry.id) + 1
+    : 0;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     const today = format(new Date(), "yyyy-MM-dd");
-    const waiting = await base44.entities.WaitlistEntry.filter({
-      status: "aguardando",
-      restaurant_id: restaurantId,
-      service_date: today,
-    });
-    const newPosition = waiting.length + 1;
-    await base44.entities.WaitlistEntry.create({
+    const entry = await base44.entities.WaitlistEntry.create({
       customer_name: name,
       customer_phone: phone,
       party_size: Number(partySize),
@@ -43,30 +63,11 @@ export default function QueuePage() {
       restaurant_id: restaurantId,
     });
     setSaving(false);
-    setPosition(newPosition);
+    setEntryId(entry.id);
   };
 
-  if (position !== null) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="bg-card rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-foreground mb-2">Você está na fila!</h2>
-          <div className="bg-accent rounded-2xl py-6 my-4">
-            <p className="text-xs text-accent-foreground uppercase tracking-wide mb-1">
-              Sua posição
-            </p>
-            <p className="text-5xl font-bold text-primary">{position}º</p>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {name} · {Number(partySize)} {Number(partySize) === 1 ? "pessoa" : "pessoas"}
-          </p>
-          <p className="text-xs text-muted-foreground mt-3">
-            Aguarde ser chamado pela equipe do restaurante.
-          </p>
-        </div>
-      </div>
-    );
+  if (entryId) {
+    return <QueueStatusCard entry={myEntry} position={myPosition} />;
   }
 
   if (restaurant?.queue_paused) {
