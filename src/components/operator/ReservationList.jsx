@@ -1,30 +1,34 @@
-import React from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Clock, Users, Phone, CheckCircle, XCircle, Armchair, AlertTriangle } from "lucide-react";
+import { Clock, Users, Phone, CheckCircle, XCircle, Armchair, AlertTriangle, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
+import CancelReservationDialog from "./CancelReservationDialog";
 
 const statusConfig = {
   aguardando: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
   confirmada: { label: "Confirmada", class: "bg-blue-100 text-blue-700 border-blue-200" },
   sentada: { label: "Sentada", class: "bg-green-100 text-green-700 border-green-200" },
+  concluida: { label: "Concluída", class: "bg-emerald-50 text-emerald-800 border-emerald-200" },
   cancelada: { label: "Cancelada", class: "bg-red-100 text-red-700 border-red-200" },
   no_show: { label: "No-show", class: "bg-gray-100 text-gray-600 border-gray-200" },
 };
 
 export default function ReservationList({ reservations, onUpdate }) {
-  const handleStatus = async (id, newStatus) => {
-    await base44.entities.Reservation.update(id, { status: newStatus });
+  const [cancelTarget, setCancelTarget] = useState(null);
+
+  const handleStatus = async (id, newStatus, extra = {}) => {
+    await base44.entities.Reservation.update(id, { status: newStatus, ...extra });
     onUpdate();
   };
 
   const activeReservations = reservations.filter(
-    (r) => r.status !== "sentada" && r.status !== "cancelada" && r.status !== "no_show"
+    (r) => r.status !== "cancelada" && r.status !== "no_show" && r.status !== "concluida"
   );
 
   const pastReservations = reservations.filter(
-    (r) => r.status === "sentada" || r.status === "cancelada" || r.status === "no_show"
+    (r) => r.status === "cancelada" || r.status === "no_show" || r.status === "concluida"
   );
 
   if (reservations.length === 0) {
@@ -39,6 +43,7 @@ export default function ReservationList({ reservations, onUpdate }) {
   const ReservationCard = ({ res }) => {
     const status = statusConfig[res.status] || statusConfig.aguardando;
     const isActive = res.status === "aguardando" || res.status === "confirmada";
+    const isSeated = res.status === "sentada";
 
     return (
       <motion.div
@@ -46,18 +51,17 @@ export default function ReservationList({ reservations, onUpdate }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, x: -100 }}
-        className={`bg-card rounded-2xl border shadow-sm overflow-hidden ${
-          res.status === "chamado" ? "border-primary" : "border-border"
-        }`}
+        className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
       >
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
               <h3 className="font-semibold text-foreground">{res.customer_name}</h3>
-              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   {res.time}
+                  {res.duration_minutes ? ` · ${res.duration_minutes}min` : ""}
                 </span>
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
@@ -80,11 +84,18 @@ export default function ReservationList({ reservations, onUpdate }) {
               {res.notes}
             </p>
           )}
+          {res.status === "cancelada" && res.cancellation_reason && (
+            <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">
+              Motivo: {res.cancellation_reason}
+            </p>
+          )}
           {isActive && (
             <div className="flex gap-2">
               <Button
                 size="sm"
-                onClick={() => handleStatus(res.id, "sentada")}
+                onClick={() =>
+                  handleStatus(res.id, "sentada", { seated_at: new Date().toISOString() })
+                }
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs"
               >
                 <Armchair className="w-3.5 h-3.5 mr-1" />
@@ -104,7 +115,7 @@ export default function ReservationList({ reservations, onUpdate }) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleStatus(res.id, "cancelada")}
+                onClick={() => setCancelTarget(res)}
                 className="rounded-xl text-xs border-red-200 text-red-500 hover:bg-red-50"
               >
                 <XCircle className="w-3.5 h-3.5" />
@@ -116,6 +127,20 @@ export default function ReservationList({ reservations, onUpdate }) {
                 className="rounded-xl text-xs border-gray-200 text-gray-500 hover:bg-gray-50"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
+          {isSeated && (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() =>
+                  handleStatus(res.id, "concluida", { completed_at: new Date().toISOString() })
+                }
+                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs"
+              >
+                <Flag className="w-3.5 h-3.5 mr-1" />
+                Concluir
               </Button>
             </div>
           )}
@@ -144,6 +169,12 @@ export default function ReservationList({ reservations, onUpdate }) {
           </div>
         </div>
       )}
+
+      <CancelReservationDialog
+        reservation={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onSuccess={onUpdate}
+      />
     </div>
   );
 }

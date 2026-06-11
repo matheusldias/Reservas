@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -11,43 +12,105 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { checkCapacity } from "@/lib/capacity";
 
-export default function AddReservationDialog({ open, onClose, onSuccess, restaurantId }) {
-  const [form, setForm] = useState({
+const ORIGINS = [
+  { value: "telefone", label: "Telefone" },
+  { value: "online", label: "Online" },
+  { value: "balcao", label: "Balcão" },
+  { value: "whatsapp", label: "WhatsApp" },
+];
+
+export default function AddReservationDialog({ open, onClose, onSuccess, restaurant }) {
+  const restaurantId = restaurant?.id;
+  const defaultDuration = restaurant?.default_duration_minutes || 90;
+
+  const emptyForm = {
     customer_name: "",
     customer_phone: "",
+    customer_email: "",
     date: format(new Date(), "yyyy-MM-dd"),
     time: "",
+    duration_minutes: defaultDuration,
     party_size: 2,
+    dining_room_id: "",
+    origin: "telefone",
     notes: "",
-  });
+  };
+
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setForm((f) => ({ ...f, duration_minutes: defaultDuration }));
+      setError("");
+    }
+  }, [open, defaultDuration]);
+
+  const { data: rooms = [] } = useQuery({
+    queryKey: ["rooms", restaurantId],
+    queryFn: () => base44.entities.DiningRoom.filter({ restaurant_id: restaurantId }),
+    enabled: !!restaurantId && open,
+  });
+
+  const { data: dayReservations = [] } = useQuery({
+    queryKey: ["capacity-reservations", restaurantId, form.date, form.dining_room_id],
+    queryFn: () =>
+      base44.entities.Reservation.filter({
+        restaurant_id: restaurantId,
+        date: form.date,
+        dining_room_id: form.dining_room_id,
+      }),
+    enabled: !!restaurantId && !!form.date && !!form.dining_room_id && open,
+  });
+
+  const room = rooms.find((r) => r.id === form.dining_room_id);
+  const capacityInfo = checkCapacity({
+    room,
+    reservations: dayReservations,
+    date: form.date,
+    time: form.time,
+    durationMinutes: Number(form.duration_minutes),
+    partySize: Number(form.party_size),
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
+    if (capacityInfo && !capacityInfo.ok) {
+      setError(
+        `Capacidade excedida: restam ${capacityInfo.remaining} lugares neste horário`
+      );
+      return;
+    }
+
     setSaving(true);
     await base44.entities.Reservation.create({
       ...form,
       party_size: Number(form.party_size),
+      duration_minutes: Number(form.duration_minutes),
       status: "aguardando",
       restaurant_id: restaurantId,
     });
     setSaving(false);
-    setForm({
-      customer_name: "",
-      customer_phone: "",
-      date: format(new Date(), "yyyy-MM-dd"),
-      time: "",
-      party_size: 2,
-      notes: "",
-    });
+    setForm(emptyForm);
     onSuccess();
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-lg">Nova Reserva</DialogTitle>
         </DialogHeader>
@@ -62,14 +125,44 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
               className="rounded-xl mt-1"
             />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Telefone</Label>
+              <Input
+                value={form.customer_phone}
+                onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
+                placeholder="(11) 99999-9999"
+                className="rounded-xl mt-1"
+              />
+            </div>
+            <div>
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                value={form.customer_email}
+                onChange={(e) => setForm({ ...form, customer_email: e.target.value })}
+                placeholder="email@exemplo.com"
+                className="rounded-xl mt-1"
+              />
+            </div>
+          </div>
           <div>
-            <Label>Telefone</Label>
-            <Input
-              value={form.customer_phone}
-              onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
-              placeholder="(11) 99999-9999"
-              className="rounded-xl mt-1"
-            />
+            <Label>Salão *</Label>
+            <Select
+              value={form.dining_room_id}
+              onValueChange={(v) => setForm({ ...form, dining_room_id: v })}
+            >
+              <SelectTrigger className="rounded-xl mt-1">
+                <SelectValue placeholder="Escolha o salão" />
+              </SelectTrigger>
+              <SelectContent>
+                {rooms.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -93,17 +186,62 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
               />
             </div>
           </div>
-          <div>
-            <Label>Nº de pessoas *</Label>
-            <Input
-              type="number"
-              required
-              min={1}
-              value={form.party_size}
-              onChange={(e) => setForm({ ...form, party_size: e.target.value })}
-              className="rounded-xl mt-1"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Duração (minutos)</Label>
+              <Input
+                type="number"
+                min={15}
+                step={15}
+                value={form.duration_minutes}
+                onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })}
+                className="rounded-xl mt-1"
+              />
+            </div>
+            <div>
+              <Label>Nº de pessoas *</Label>
+              <Input
+                type="number"
+                required
+                min={1}
+                value={form.party_size}
+                onChange={(e) => setForm({ ...form, party_size: e.target.value })}
+                className="rounded-xl mt-1"
+              />
+            </div>
           </div>
+          <div>
+            <Label>Origem</Label>
+            <Select
+              value={form.origin}
+              onValueChange={(v) => setForm({ ...form, origin: v })}
+            >
+              <SelectTrigger className="rounded-xl mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ORIGINS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {capacityInfo && (
+            <div
+              className={`text-xs rounded-xl px-3 py-2 border ${
+                capacityInfo.ok
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : "bg-red-50 border-red-200 text-red-600"
+              }`}
+            >
+              Ocupação neste horário: {capacityInfo.occupied}/{capacityInfo.capacity} lugares
+              · Restam {capacityInfo.remaining}
+            </div>
+          )}
+
           <div>
             <Label>Observações</Label>
             <Textarea
@@ -114,9 +252,16 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
               rows={2}
             />
           </div>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
+
           <Button
             type="submit"
-            disabled={saving}
+            disabled={saving || !form.dining_room_id}
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
           >
             {saving ? "Salvando..." : "Criar Reserva"}

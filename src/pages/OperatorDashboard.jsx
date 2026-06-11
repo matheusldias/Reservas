@@ -67,7 +67,7 @@ export default function OperatorDashboard() {
   );
 
   const activeReservations = reservations.filter(
-    (r) => r.status !== "cancelada" && r.status !== "sentada" && r.status !== "no_show"
+    (r) => r.status !== "cancelada" && r.status !== "no_show" && r.status !== "concluida"
   );
 
   const refetchAll = () => {
@@ -212,7 +212,7 @@ export default function OperatorDashboard() {
         open={showAddReservation}
         onClose={() => setShowAddReservation(false)}
         onSuccess={refetchAll}
-        restaurantId={restaurant?.id}
+        restaurant={restaurant}
       />
       <AddWaitlistDialog
         open={showAddWaitlist}

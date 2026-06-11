@@ -15,6 +15,7 @@ import {
 import { CheckCircle2, CalendarClock, MapPin, Users, Clock, ChevronLeft } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { getAvailableSlots } from "@/lib/publicSlots";
+import { checkCapacity } from "@/lib/capacity";
 
 export default function ReservePage() {
   const [step, setStep] = useState(1); // 1: booking, 2: user data
@@ -26,6 +27,7 @@ export default function ReservePage() {
   const [partySize, setPartySize] = useState("2");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
 
   const { restaurantId } = useParams();
 
@@ -58,11 +60,36 @@ export default function ReservePage() {
       return;
     }
     setSaving(true);
+    setError("");
+
+    const durationMinutes = restaurant?.default_duration_minutes || 90;
+    const dayReservations = await base44.entities.Reservation.filter({
+      restaurant_id: restaurantId,
+      date,
+      dining_room_id: roomId,
+    });
+    const capacityInfo = checkCapacity({
+      room,
+      reservations: dayReservations,
+      date,
+      time,
+      durationMinutes,
+      partySize: Number(partySize),
+    });
+    if (capacityInfo && !capacityInfo.ok) {
+      setError(
+        `Capacidade excedida: restam ${capacityInfo.remaining} lugares neste horário`
+      );
+      setSaving(false);
+      return;
+    }
+
     await base44.entities.Reservation.create({
       customer_name: name,
       customer_phone: phone,
       date,
       time,
+      duration_minutes: durationMinutes,
       party_size: Number(partySize),
       dining_room_id: roomId,
       status: "aguardando",
@@ -281,6 +308,12 @@ export default function ReservePage() {
                     {restaurant.booking_rules}
                   </div>
                 </div>
+              )}
+
+              {error && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {error}
+                </p>
               )}
 
               <Button

@@ -16,6 +16,7 @@ export default function BookingSettings() {
   const [form, setForm] = useState({
     booking_window_days: 30,
     tolerance_minutes: 15,
+    default_duration_minutes: 90,
     booking_rules: "",
   });
 
@@ -24,6 +25,7 @@ export default function BookingSettings() {
       setForm({
         booking_window_days: restaurant.booking_window_days || 30,
         tolerance_minutes: restaurant.tolerance_minutes || 15,
+        default_duration_minutes: restaurant.default_duration_minutes || 90,
         booking_rules: restaurant.booking_rules || "",
       });
     }
@@ -43,6 +45,7 @@ export default function BookingSettings() {
     mutation.mutate({
       booking_window_days: Number(form.booking_window_days),
       tolerance_minutes: Number(form.tolerance_minutes),
+      default_duration_minutes: Number(form.default_duration_minutes),
       booking_rules: form.booking_rules,
     });
   };
@@ -88,6 +91,22 @@ export default function BookingSettings() {
               value={form.tolerance_minutes}
               onChange={(e) =>
                 setForm({ ...form, tolerance_minutes: e.target.value })
+              }
+              className="rounded-xl"
+            />
+          </div>
+          <div>
+            <Label>Duração padrão da reserva (minutos)</Label>
+            <p className="text-xs text-muted-foreground mb-1">
+              Tempo que cada reserva ocupa a capacidade do salão
+            </p>
+            <Input
+              type="number"
+              min={15}
+              step={15}
+              value={form.default_duration_minutes}
+              onChange={(e) =>
+                setForm({ ...form, default_duration_minutes: e.target.value })
               }
               className="rounded-xl"
             />
