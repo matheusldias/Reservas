@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
+import { normalizePhone, formatPhoneMask } from "@/lib/phone";
+import { linkCustomer } from "@/lib/customers";
+import useCustomerLookup from "@/hooks/useCustomerLookup";
+import CustomerBadge from "@/components/customers/CustomerBadge";
 import {
   Dialog,
   DialogContent,
@@ -27,13 +31,31 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurant
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
+  const foundCustomer = useCustomerLookup(restaurantId, form.customer_phone);
+
+  React.useEffect(() => {
+    if (foundCustomer) {
+      setForm((f) => ({
+        ...f,
+        customer_name: f.customer_name || foundCustomer.name || "",
+        customer_email: f.customer_email || foundCustomer.email || "",
+      }));
+    }
+  }, [foundCustomer]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const customerId = await linkCustomer(restaurantId, {
+      name: form.customer_name,
+      phone: form.customer_phone,
+      email: form.customer_email,
+    });
     const { quoted_wait_minutes, ...rest } = form;
     await base44.entities.WaitlistEntry.create({
       ...rest,
-      customer_phone: form.customer_phone ? `+55${form.customer_phone.replace(/\D/g, "")}` : "",
+      customer_phone: normalizePhone(form.customer_phone),
+      ...(customerId ? { customer_id: customerId } : {}),
       party_size: Number(form.party_size),
       ...(quoted_wait_minutes ? { quoted_wait_minutes: Number(quoted_wait_minutes) } : {}),
       status: "aguardando",
@@ -74,11 +96,14 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurant
               <Input
                 type="tel"
                 value={form.customer_phone}
-                onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, customer_phone: formatPhoneMask(e.target.value) })
+                }
                 placeholder="(11) 99999-9999"
                 className="rounded-r-xl rounded-l-none"
               />
             </div>
+            <CustomerBadge customer={foundCustomer} />
           </div>
           <div>
             <Label>E-mail</Label>

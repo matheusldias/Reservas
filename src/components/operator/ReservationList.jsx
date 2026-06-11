@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import CancelReservationDialog from "./CancelReservationDialog";
+import { recordVisit, recordNoShow } from "@/lib/customers";
 
 const statusConfig = {
   aguardando: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -123,7 +124,11 @@ export default function ReservationList({ reservations, onUpdate }) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleStatus(res.id, "no_show")}
+                onClick={async () => {
+                  await handleStatus(res.id, "no_show");
+                  await recordNoShow(res.customer_id);
+                  onUpdate();
+                }}
                 className="rounded-xl text-xs border-gray-200 text-gray-500 hover:bg-gray-50"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
@@ -134,9 +139,13 @@ export default function ReservationList({ reservations, onUpdate }) {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                onClick={() =>
-                  handleStatus(res.id, "concluida", { completed_at: new Date().toISOString() })
-                }
+                onClick={async () => {
+                  await handleStatus(res.id, "concluida", {
+                    completed_at: new Date().toISOString(),
+                  });
+                  await recordVisit(res.customer_id);
+                  onUpdate();
+                }}
                 className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs"
               >
                 <Flag className="w-3.5 h-3.5 mr-1" />

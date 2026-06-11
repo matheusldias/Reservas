@@ -1,0 +1,68 @@
+{
+  "name": "Customer",
+  "properties": {
+    "birthday": {
+      "description": "Data de anivers\u00e1rio",
+      "format": "date",
+      "type": "string"
+    },
+    "email": {
+      "description": "E-mail do cliente",
+      "type": "string"
+    },
+    "last_visit_date": {
+      "description": "Data da \u00faltima visita",
+      "format": "date",
+      "type": "string"
+    },
+    "marketing_consent": {
+      "default": false,
+      "description": "Consentimento LGPD para comunica\u00e7\u00f5es de marketing",
+      "type": "boolean"
+    },
+    "name": {
+      "description": "Nome do cliente",
+      "type": "string"
+    },
+    "no_show_count": {
+      "default": 0,
+      "description": "Quantidade de no-shows (reservas e fila)",
+      "type": "number"
+    },
+    "notes": {
+      "description": "Observa\u00e7\u00f5es internas sobre o cliente (prefer\u00eancias, restri\u00e7\u00f5es)",
+      "type": "string"
+    },
+    "phone": {
+      "description": "Telefone normalizado, somente d\u00edgitos com DDI (ex: 5547997609754). Chave de deduplica\u00e7\u00e3o.",
+      "type": "string"
+    },
+    "restaurant_id": {
+      "description": "ID do restaurante",
+      "type": "string"
+    },
+    "tags": {
+      "description": "Etiquetas livres (ex: anivers\u00e1rio, alergia a gl\u00faten)",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "vip": {
+      "default": false,
+      "description": "Cliente VIP",
+      "type": "boolean"
+    },
+    "visits_count": {
+      "default": 0,
+      "description": "Quantidade de visitas conclu\u00eddas (reservas conclu\u00eddas + fila sentado)",
+      "type": "number"
+    }
+  },
+  "required": [
+    "name",
+    "phone",
+    "restaurant_id"
+  ],
+  "type": "object"
+}

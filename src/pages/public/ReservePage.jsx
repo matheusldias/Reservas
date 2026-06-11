@@ -16,6 +16,8 @@ import { CheckCircle2, CalendarClock, MapPin, Users, Clock, ChevronLeft } from "
 import { format, addDays } from "date-fns";
 import { getAvailableSlots } from "@/lib/publicSlots";
 import { checkCapacity } from "@/lib/capacity";
+import { normalizePhone, formatPhoneMask } from "@/lib/phone";
+import { linkCustomer } from "@/lib/customers";
 
 export default function ReservePage() {
   const [step, setStep] = useState(1); // 1: booking, 2: user data
@@ -24,6 +26,7 @@ export default function ReservePage() {
   const [time, setTime] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [partySize, setPartySize] = useState("2");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -84,9 +87,15 @@ export default function ReservePage() {
       return;
     }
 
+    const customerId = await linkCustomer(restaurantId, {
+      name,
+      phone,
+      email,
+    });
     await base44.entities.Reservation.create({
       customer_name: name,
-      customer_phone: phone,
+      customer_phone: normalizePhone(phone),
+      customer_email: email,
       date,
       time,
       duration_minutes: durationMinutes,
@@ -94,6 +103,7 @@ export default function ReservePage() {
       dining_room_id: roomId,
       status: "aguardando",
       restaurant_id: restaurantId,
+      ...(customerId ? { customer_id: customerId } : {}),
     });
     setSaving(false);
     setDone(true);
@@ -281,6 +291,8 @@ export default function ReservePage() {
                 <Label>E-mail</Label>
                 <Input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   className="rounded-lg mt-2 h-10"
                 />
@@ -294,7 +306,7 @@ export default function ReservePage() {
                   </span>
                   <Input
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(formatPhoneMask(e.target.value))}
                     placeholder="(11) 99999-9999"
                     className="rounded-l-none h-10"
                   />

@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import PublicHeader from "@/components/public/PublicHeader";
 import QueueStatusCard from "@/components/public/QueueStatusCard";
 import { sortQueue } from "@/lib/queue";
+import { normalizePhone, formatPhoneMask } from "@/lib/phone";
+import { linkCustomer } from "@/lib/customers";
 
 export default function QueuePage() {
   const [name, setName] = useState("");
@@ -70,13 +72,15 @@ export default function QueuePage() {
     e.preventDefault();
     setSaving(true);
     const today = format(new Date(), "yyyy-MM-dd");
+    const customerId = await linkCustomer(restaurantId, { name, phone });
     const entry = await base44.entities.WaitlistEntry.create({
       customer_name: name,
-      customer_phone: phone,
+      customer_phone: normalizePhone(phone),
       party_size: Number(partySize),
       status: "aguardando",
       service_date: today,
       restaurant_id: restaurantId,
+      ...(customerId ? { customer_id: customerId } : {}),
     });
     setSaving(false);
     setEntryId(entry.id);
@@ -123,7 +127,7 @@ export default function QueuePage() {
               <Label>Telefone</Label>
               <Input
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatPhoneMask(e.target.value))}
                 placeholder="(00) 00000-0000"
                 className="rounded-xl mt-1"
               />

@@ -20,6 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { checkCapacity } from "@/lib/capacity";
+import { normalizePhone, formatPhoneMask } from "@/lib/phone";
+import { linkCustomer } from "@/lib/customers";
+import useCustomerLookup from "@/hooks/useCustomerLookup";
+import CustomerBadge from "@/components/customers/CustomerBadge";
+import { AlertTriangle } from "lucide-react";
 
 const ORIGINS = [
   { value: "telefone", label: "Telefone" },
@@ -48,6 +53,18 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const foundCustomer = useCustomerLookup(restaurantId, form.customer_phone);
+
+  useEffect(() => {
+    if (foundCustomer) {
+      setForm((f) => ({
+        ...f,
+        customer_name: f.customer_name || foundCustomer.name || "",
+        customer_email: f.customer_email || foundCustomer.email || "",
+      }));
+    }
+  }, [foundCustomer]);
 
   useEffect(() => {
     if (open) {
@@ -95,12 +112,19 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
     }
 
     setSaving(true);
+    const customerId = await linkCustomer(restaurantId, {
+      name: form.customer_name,
+      phone: form.customer_phone,
+      email: form.customer_email,
+    });
     await base44.entities.Reservation.create({
       ...form,
+      customer_phone: normalizePhone(form.customer_phone),
       party_size: Number(form.party_size),
       duration_minutes: Number(form.duration_minutes),
       status: "aguardando",
       restaurant_id: restaurantId,
+      ...(customerId ? { customer_id: customerId } : {}),
     });
     setSaving(false);
     setForm(emptyForm);
@@ -130,7 +154,9 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
               <Label>Telefone</Label>
               <Input
                 value={form.customer_phone}
-                onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, customer_phone: formatPhoneMask(e.target.value) })
+                }
                 placeholder="(11) 99999-9999"
                 className="rounded-xl mt-1"
               />
@@ -146,6 +172,16 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
               />
             </div>
           </div>
+
+          <CustomerBadge customer={foundCustomer} />
+
+          {foundCustomer && (foundCustomer.no_show_count || 0) >= 2 && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-3 py-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Atenção: este cliente tem {foundCustomer.no_show_count} no-shows registrados.
+            </div>
+          )}
+
           <div>
             <Label>Salão *</Label>
             <Select
