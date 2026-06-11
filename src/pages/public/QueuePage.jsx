@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -26,25 +26,41 @@ export default function QueuePage() {
   });
   const restaurant = restaurants[0];
 
-  const { data: myEntries = [] } = useQuery({
-    queryKey: ["queue-my-entry", entryId],
-    queryFn: () => base44.entities.WaitlistEntry.filter({ id: entryId }),
-    enabled: !!entryId,
-    refetchInterval: 7000,
-  });
-  const myEntry = myEntries[0];
+  const [myEntry, setMyEntry] = useState(null);
+  const [waitingList, setWaitingList] = useState([]);
 
-  const { data: waitingList = [] } = useQuery({
-    queryKey: ["queue-waiting", restaurantId, myEntry?.service_date],
-    queryFn: () =>
-      base44.entities.WaitlistEntry.filter({
-        status: "aguardando",
-        restaurant_id: restaurantId,
-        service_date: myEntry.service_date,
-      }),
-    enabled: !!myEntry && myEntry.status === "aguardando",
-    refetchInterval: 7000,
-  });
+  // Polling: busca o registro SEMPRE pelo ID a cada 5s, independente do status
+  useEffect(() => {
+    if (!entryId) return;
+    let active = true;
+
+    const fetchStatus = async () => {
+      try {
+        const results = await base44.entities.WaitlistEntry.filter({ id: entryId });
+        if (!active || results.length === 0) return;
+        const entry = results[0];
+        setMyEntry(entry);
+
+        if (entry.status === "aguardando") {
+          const waiting = await base44.entities.WaitlistEntry.filter({
+            status: "aguardando",
+            restaurant_id: restaurantId,
+            service_date: entry.service_date,
+          });
+          if (active) setWaitingList(waiting);
+        }
+      } catch {
+        // mantém o último estado e tenta novamente no próximo ciclo
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [entryId, restaurantId]);
 
   const myPosition = myEntry
     ? sortQueue(waitingList).findIndex((e) => e.id === myEntry.id) + 1
