@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { sortQueue, minutesSince } from "@/lib/queue";
 import RemoveWaitlistDialog from "./RemoveWaitlistDialog";
-import { recordVisit, recordNoShow } from "@/lib/customers";
+import { recordVisit, recordNoShow, ensureWaitlistCustomer } from "@/lib/customers";
 
 export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5 }) {
   const [, setTick] = useState(0);
@@ -23,6 +23,7 @@ export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5
   };
 
   const handleCall = async (entry) => {
+    await ensureWaitlistCustomer(entry);
     await handleStatus(entry.id, "chamado", { called_at: new Date().toISOString() });
     if (entry.customer_phone) {
       const phone = entry.customer_phone.replace(/\D/g, "");
@@ -156,10 +157,11 @@ export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5
                   <Button
                     size="sm"
                     onClick={async () => {
+                      const customerId = await ensureWaitlistCustomer(entry);
                       await handleStatus(entry.id, "sentado", {
                         seated_at: new Date().toISOString(),
                       });
-                      await recordVisit(entry.customer_id);
+                      await recordVisit(customerId);
                       onUpdate();
                     }}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs"
@@ -171,10 +173,11 @@ export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5
                     <Button
                       size="sm"
                       onClick={async () => {
+                        const customerId = await ensureWaitlistCustomer(entry);
                         await handleStatus(entry.id, "no_show", {
                           removed_at: new Date().toISOString(),
                         });
-                        await recordNoShow(entry.customer_id);
+                        await recordNoShow(customerId);
                         onUpdate();
                       }}
                       className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs"

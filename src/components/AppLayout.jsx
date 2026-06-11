@@ -9,6 +9,7 @@ import {
   CalendarClock,
   BarChart3,
   Users,
+  Contact,
   Menu,
   X,
   LogOut,
@@ -17,18 +18,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { RestaurantProvider } from "@/lib/RestaurantContext";
 import RestaurantSelector from "@/components/RestaurantSelector";
+import NoRestaurantScreen from "@/components/NoRestaurantScreen";
+import { getAppRole, ROLE_LABELS } from "@/lib/roles";
 
-const adminNav = [
+const managerNav = [
   { label: "Painel", path: "/", icon: LayoutDashboard },
+  { label: "Clientes", path: "/clientes", icon: Contact },
   { label: "Salões", path: "/admin/rooms", icon: UtensilsCrossed },
   { label: "Ajustes de Reserva", path: "/admin/booking-settings", icon: CalendarClock },
   { label: "Relatórios", path: "/admin/reports", icon: BarChart3 },
-  { label: "Usuários", path: "/admin/users", icon: Users },
-  { label: "Configurações", path: "/admin/settings", icon: Settings },
+  { label: "Equipe", path: "/admin/users", icon: Users },
 ];
 
-const operatorNav = [
+const hostessNav = [
   { label: "Painel", path: "/", icon: LayoutDashboard },
+  { label: "Clientes", path: "/clientes", icon: Contact },
 ];
 
 export default function AppLayout() {
@@ -36,8 +40,15 @@ export default function AppLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const isAdmin = user?.role === "admin";
-  const navItems = isAdmin ? adminNav.slice(0, -1) : operatorNav;
+  const role = getAppRole(user);
+  const isAdmin = role === "admin";
+  const canManage = isAdmin || role === "gerente";
+  const navItems = canManage ? managerNav : hostessNav;
+
+  // Usuário sem restaurante vinculado (exceto admin)
+  if (user && !isAdmin && !user.restaurant_id) {
+    return <NoRestaurantScreen />;
+  }
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -89,7 +100,7 @@ export default function AppLayout() {
               <div>
                 <h1 className="font-heading font-bold text-foreground text-lg">Reservas</h1>
                 <p className="text-xs text-muted-foreground capitalize">
-                  {isAdmin ? "Administrador" : "Operador"}
+                  {ROLE_LABELS[role] || "Operador"}
                 </p>
               </div>
             </div>
@@ -103,10 +114,12 @@ export default function AppLayout() {
             </Button>
           </div>
 
-          {/* Restaurant Selector */}
-          <div className="px-4 pb-4">
-            <RestaurantSelector />
-          </div>
+          {/* Restaurant Selector (apenas admin alterna entre restaurantes) */}
+          {isAdmin && (
+            <div className="px-4 pb-4">
+              <RestaurantSelector />
+            </div>
+          )}
 
           {/* Nav */}
           <nav className="flex-1 px-3 space-y-1">
@@ -130,7 +143,7 @@ export default function AppLayout() {
               );
             })}
 
-            {isAdmin && (
+            {canManage && (
               <>
                 <div className="pt-4 pb-2 px-4">
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -138,10 +151,10 @@ export default function AppLayout() {
                   </p>
                 </div>
                 <Link
-                  to={adminNav[adminNav.length - 1].path}
+                  to="/admin/settings"
                   onClick={() => setSidebarOpen(false)}
                   className={`mx-3 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === adminNav[adminNav.length - 1].path
+                    location.pathname === "/admin/settings"
                       ? "bg-primary text-primary-foreground shadow-md"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}

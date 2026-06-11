@@ -5,9 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Store, Plus, Edit2, Trash2, CalendarClock, Users, Copy } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import RestaurantFormDialog from "@/components/admin/RestaurantFormDialog";
+import { useAuth } from "@/lib/AuthContext";
+import { getAppRole } from "@/lib/roles";
 
 export default function RestaurantSettings() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = getAppRole(user) === "admin";
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -43,16 +47,18 @@ export default function RestaurantSettings() {
             Cadastre e gerencie seus restaurantes
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setShowDialog(true);
-          }}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          Novo Restaurante
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setShowDialog(true);
+            }}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Novo Restaurante
+          </Button>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -79,14 +85,16 @@ export default function RestaurantSettings() {
                 >
                   <Edit2 className="w-4 h-4" />
                 </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-destructive"
-                  onClick={() => handleDelete(r)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                {isAdmin && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => handleDelete(r)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
 

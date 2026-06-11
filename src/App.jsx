@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import RoleRoute from '@/components/RoleRoute';
 
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -19,6 +20,7 @@ import DiningRooms from '@/pages/admin/DiningRooms';
 import BookingSettings from '@/pages/admin/BookingSettings';
 import Reports from '@/pages/admin/Reports';
 import Users from '@/pages/admin/Users';
+import Customers from '@/pages/Customers';
 import ReservePage from '@/pages/public/ReservePage';
 import ChooseRestaurantPage from '@/pages/public/ChooseRestaurantPage';
 import QueuePage from '@/pages/public/QueuePage';
@@ -57,11 +59,14 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<OperatorDashboard />} />
-          <Route path="/admin/settings" element={<RestaurantSettings />} />
-          <Route path="/admin/rooms" element={<DiningRooms />} />
-          <Route path="/admin/booking-settings" element={<BookingSettings />} />
-          <Route path="/admin/reports" element={<Reports />} />
-          <Route path="/admin/users" element={<Users />} />
+          <Route path="/clientes" element={<Customers />} />
+          <Route element={<RoleRoute roles={["admin", "gerente"]} />}>
+            <Route path="/admin/settings" element={<RestaurantSettings />} />
+            <Route path="/admin/rooms" element={<DiningRooms />} />
+            <Route path="/admin/booking-settings" element={<BookingSettings />} />
+            <Route path="/admin/reports" element={<Reports />} />
+            <Route path="/admin/users" element={<Users />} />
+          </Route>
         </Route>
       </Route>
 

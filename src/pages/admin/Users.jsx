@@ -6,6 +6,8 @@ import { Users as UsersIcon, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useRestaurant } from "@/lib/RestaurantContext";
+import { useAuth } from "@/lib/AuthContext";
+import { getAppRole, ROLE_LABELS } from "@/lib/roles";
 import InviteUserDialog from "@/components/admin/InviteUserDialog";
 import {
   Select,
@@ -19,19 +21,39 @@ export default function Users() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { restaurants } = useRestaurant();
+  const { user: currentUser } = useAuth();
+  const isAdmin = getAppRole(currentUser) === "admin";
   const [showInvite, setShowInvite] = useState(false);
 
-  const { data: users = [] } = useQuery({
+  const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
     queryFn: () => base44.entities.User.list(),
   });
 
+  // Gerente vê apenas a equipe do próprio restaurante
+  const users = isAdmin
+    ? allUsers
+    : allUsers.filter((u) => u.restaurant_id === currentUser?.restaurant_id);
+
   const refetch = () => queryClient.invalidateQueries({ queryKey: ["users"] });
 
-  const assignRestaurant = async (user, restaurantId) => {
-    await base44.entities.User.update(user.id, { restaurant_id: restaurantId });
+  const updateUser = async (u, data, message) => {
+    await base44.entities.User.update(u.id, data);
     refetch();
-    toast({ title: "Restaurante atribuído!" });
+    toast({ title: message });
+  };
+
+  const roleBadge = (u) => {
+    const role = getAppRole(u);
+    if (role === "admin")
+      return <Badge className="bg-primary/10 text-primary">Administrador</Badge>;
+    if (role)
+      return (
+        <Badge className="bg-secondary text-secondary-foreground">
+          {ROLE_LABELS[role]}
+        </Badge>
+      );
+    return <Badge variant="outline">Sem papel</Badge>;
   };
 
   return (
@@ -40,19 +62,23 @@ export default function Users() {
         <div>
           <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
             <UsersIcon className="w-6 h-6 text-primary" />
-            Usuários
+            Equipe
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Convide usuários e defina a loja de cada um
+            {isAdmin
+              ? "Convide usuários e defina o restaurante e o papel de cada um"
+              : "Equipe do seu restaurante"}
           </p>
         </div>
-        <Button
-          onClick={() => setShowInvite(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          Convidar Usuário
-        </Button>
+        {isAdmin && (
+          <Button
+            onClick={() => setShowInvite(true)}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Convidar Usuário
+          </Button>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -74,31 +100,48 @@ export default function Users() {
                 <p className="text-xs text-muted-foreground truncate">{u.email}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Badge
-                className={
-                  u.role === "admin"
-                    ? "bg-primary/10 text-primary"
-                    : "bg-secondary text-secondary-foreground"
-                }
-              >
-                {u.role === "admin" ? "Administrador" : "Operador"}
-              </Badge>
-              <Select
-                value={u.restaurant_id || ""}
-                onValueChange={(value) => assignRestaurant(u, value)}
-              >
-                <SelectTrigger className="rounded-xl w-48 h-9 text-xs">
-                  <SelectValue placeholder="Sem restaurante" />
-                </SelectTrigger>
-                <SelectContent>
-                  {restaurants.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-3 flex-wrap">
+              {roleBadge(u)}
+              {isAdmin && u.role !== "admin" ? (
+                <Select
+                  value={u.app_role || ""}
+                  onValueChange={(value) =>
+                    updateUser(u, { app_role: value }, "Papel atualizado!")
+                  }
+                >
+                  <SelectTrigger className="rounded-xl w-32 h-9 text-xs">
+                    <SelectValue placeholder="Papel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gerente">Gerente</SelectItem>
+                    <SelectItem value="hostess">Hostess</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : null}
+              {isAdmin ? (
+                <Select
+                  value={u.restaurant_id || ""}
+                  onValueChange={(value) =>
+                    updateUser(u, { restaurant_id: value }, "Restaurante atribuído!")
+                  }
+                >
+                  <SelectTrigger className="rounded-xl w-48 h-9 text-xs">
+                    <SelectValue placeholder="Sem restaurante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {restaurants.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {restaurants.find((r) => r.id === u.restaurant_id)?.name ||
+                    "Sem restaurante"}
+                </span>
+              )}
             </div>
           </div>
         ))}
