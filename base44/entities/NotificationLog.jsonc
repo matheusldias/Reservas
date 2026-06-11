@@ -1,0 +1,120 @@
+{
+  "name": "NotificationLog",
+  "properties": {
+    "channel": {
+      "default": "whatsapp",
+      "description": "Canal de envio",
+      "enum": [
+        "whatsapp",
+        "sms",
+        "email"
+      ],
+      "type": "string"
+    },
+    "customer_phone": {
+      "description": "Telefone normalizado do destinat\u00e1rio",
+      "type": "string"
+    },
+    "error_message": {
+      "description": "Mensagem de erro, se falhou",
+      "type": "string"
+    },
+    "message_preview": {
+      "description": "Resumo do conte\u00fado enviado",
+      "type": "string"
+    },
+    "related_entity_id": {
+      "description": "ID da reserva ou entrada de fila relacionada",
+      "type": "string"
+    },
+    "related_entity_type": {
+      "description": "Tipo do registro relacionado",
+      "enum": [
+        "reservation",
+        "waitlist"
+      ],
+      "type": "string"
+    },
+    "restaurant_id": {
+      "description": "ID do restaurante",
+      "type": "string"
+    },
+    "sent_at": {
+      "description": "Momento do envio",
+      "format": "date-time",
+      "type": "string"
+    },
+    "status": {
+      "default": "pendente",
+      "description": "Status do envio",
+      "enum": [
+        "pendente",
+        "enviado",
+        "entregue",
+        "falhou"
+      ],
+      "type": "string"
+    },
+    "type": {
+      "description": "Tipo da notifica\u00e7\u00e3o",
+      "enum": [
+        "fila_entrada",
+        "fila_posicao",
+        "fila_chamado",
+        "reserva_confirmacao",
+        "reserva_lembrete",
+        "outro"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "customer_phone",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.restaurant_id": "{{user.data.restaurant_id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.restaurant_id": "{{user.data.restaurant_id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.restaurant_id": "{{user.data.restaurant_id}}"
+        }
+      ]
+    }
+  },
+  "type": "object"
+}
