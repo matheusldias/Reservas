@@ -17,6 +17,7 @@ export default function BookingSettings() {
     booking_window_days: 30,
     tolerance_minutes: 15,
     default_duration_minutes: 90,
+    queue_call_timeout_minutes: 5,
     booking_rules: "",
   });
 
@@ -26,6 +27,7 @@ export default function BookingSettings() {
         booking_window_days: restaurant.booking_window_days || 30,
         tolerance_minutes: restaurant.tolerance_minutes || 15,
         default_duration_minutes: restaurant.default_duration_minutes || 90,
+        queue_call_timeout_minutes: restaurant.queue_call_timeout_minutes || 5,
         booking_rules: restaurant.booking_rules || "",
       });
     }
@@ -46,6 +48,7 @@ export default function BookingSettings() {
       booking_window_days: Number(form.booking_window_days),
       tolerance_minutes: Number(form.tolerance_minutes),
       default_duration_minutes: Number(form.default_duration_minutes),
+      queue_call_timeout_minutes: Number(form.queue_call_timeout_minutes),
       booking_rules: form.booking_rules,
     });
   };
@@ -107,6 +110,21 @@ export default function BookingSettings() {
               value={form.default_duration_minutes}
               onChange={(e) =>
                 setForm({ ...form, default_duration_minutes: e.target.value })
+              }
+              className="rounded-xl"
+            />
+          </div>
+          <div>
+            <Label>Tempo limite após chamar (minutos)</Label>
+            <p className="text-xs text-muted-foreground mb-1">
+              Tempo após chamar o cliente da fila antes de sugerir no-show
+            </p>
+            <Input
+              type="number"
+              min={1}
+              value={form.queue_call_timeout_minutes}
+              onChange={(e) =>
+                setForm({ ...form, queue_call_timeout_minutes: e.target.value })
               }
               className="rounded-xl"
             />

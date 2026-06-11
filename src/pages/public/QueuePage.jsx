@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, PauseCircle } from "lucide-react";
+import { format } from "date-fns";
 import PublicHeader from "@/components/public/PublicHeader";
 
 export default function QueuePage() {
@@ -26,21 +27,19 @@ export default function QueuePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const today = format(new Date(), "yyyy-MM-dd");
     const waiting = await base44.entities.WaitlistEntry.filter({
       status: "aguardando",
       restaurant_id: restaurantId,
+      service_date: today,
     });
-    const called = await base44.entities.WaitlistEntry.filter({
-      status: "chamado",
-      restaurant_id: restaurantId,
-    });
-    const newPosition = waiting.length + called.length + 1;
+    const newPosition = waiting.length + 1;
     await base44.entities.WaitlistEntry.create({
       customer_name: name,
       customer_phone: phone,
       party_size: Number(partySize),
       status: "aguardando",
-      position: newPosition,
+      service_date: today,
       restaurant_id: restaurantId,
     });
     setSaving(false);

@@ -13,6 +13,8 @@ import AddReservationDialog from "@/components/operator/AddReservationDialog";
 import AddWaitlistDialog from "@/components/operator/AddWaitlistDialog";
 import ShareLinks from "@/components/operator/ShareLinks";
 import ReservationCalendarDialog from "@/components/operator/ReservationCalendarDialog";
+import QueueMetrics from "@/components/operator/QueueMetrics";
+import WaitlistHistory from "@/components/operator/WaitlistHistory";
 
 export default function OperatorDashboard() {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -21,6 +23,7 @@ export default function OperatorDashboard() {
   const [showAddReservation, setShowAddReservation] = useState(false);
   const [showAddWaitlist, setShowAddWaitlist] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [queueView, setQueueView] = useState("hoje");
 
   const { restaurant, refetchRestaurants } = useRestaurant();
 
@@ -42,28 +45,18 @@ export default function OperatorDashboard() {
     enabled: !!restaurant,
   });
 
-  const { data: waitlist = [], refetch: refetchWaitlist } = useQuery({
-    queryKey: ["waitlist", restaurant?.id],
+  const { data: todayWaitlist = [], refetch: refetchWaitlist } = useQuery({
+    queryKey: ["waitlist", restaurant?.id, today],
     queryFn: () => base44.entities.WaitlistEntry.filter(
-      { status: "aguardando", restaurant_id: restaurant.id },
+      { restaurant_id: restaurant.id, service_date: today },
       "created_date",
-      100
+      200
     ),
     enabled: !!restaurant,
   });
 
-  const { data: calledWaitlist = [], refetch: refetchCalled } = useQuery({
-    queryKey: ["waitlist-called", restaurant?.id],
-    queryFn: () => base44.entities.WaitlistEntry.filter(
-      { status: "chamado", restaurant_id: restaurant.id },
-      "created_date",
-      100
-    ),
-    enabled: !!restaurant,
-  });
-
-  const allActiveWaitlist = [...waitlist, ...calledWaitlist].sort(
-    (a, b) => new Date(a.created_date) - new Date(b.created_date)
+  const allActiveWaitlist = todayWaitlist.filter(
+    (e) => e.status === "aguardando" || e.status === "chamado"
   );
 
   const activeReservations = reservations.filter(
@@ -73,7 +66,6 @@ export default function OperatorDashboard() {
   const refetchAll = () => {
     refetchReservations();
     refetchWaitlist();
-    refetchCalled();
   };
 
   return (
@@ -177,7 +169,29 @@ export default function OperatorDashboard() {
         </TabsContent>
 
         <TabsContent value="waitlist" className="mt-4">
-          <div className="mb-4">
+          <div className="mb-4 flex items-center gap-2 flex-wrap">
+            <div className="inline-flex bg-muted rounded-xl p-1">
+              <button
+                onClick={() => setQueueView("hoje")}
+                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  queueView === "hoje"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Hoje
+              </button>
+              <button
+                onClick={() => setQueueView("historico")}
+                className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  queueView === "historico"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Histórico
+              </button>
+            </div>
             <Button
               size="sm"
               variant="outline"
@@ -199,12 +213,23 @@ export default function OperatorDashboard() {
               )}
             </Button>
           </div>
-          {restaurant?.queue_paused && (
+          {restaurant?.queue_paused && queueView === "hoje" && (
             <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-xl px-4 py-3">
               A fila está pausada. Novas entradas estão suspensas.
             </div>
           )}
-          <WaitlistList entries={allActiveWaitlist} onUpdate={refetchAll} />
+          {queueView === "hoje" ? (
+            <>
+              <QueueMetrics entries={todayWaitlist} />
+              <WaitlistList
+                entries={allActiveWaitlist}
+                onUpdate={refetchAll}
+                callTimeoutMinutes={restaurant?.queue_call_timeout_minutes || 5}
+              />
+            </>
+          ) : (
+            <WaitlistHistory restaurantId={restaurant?.id} />
+          )}
         </TabsContent>
       </Tabs>
 

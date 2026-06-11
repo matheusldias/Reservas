@@ -1,18 +1,28 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Users, Phone, Bell, Armchair, X, MessageCircle } from "lucide-react";
+import { Users, Phone, Bell, Armchair, X, MessageCircle, Star, Timer, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
+import { sortQueue, minutesSince } from "@/lib/queue";
+import RemoveWaitlistDialog from "./RemoveWaitlistDialog";
 
-export default function WaitlistList({ entries, onUpdate }) {
-  const handleStatus = async (id, newStatus) => {
-    await base44.entities.WaitlistEntry.update(id, { status: newStatus });
+export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5 }) {
+  const [, setTick] = useState(0);
+  const [removeTarget, setRemoveTarget] = useState(null);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  const handleStatus = async (id, newStatus, extra = {}) => {
+    await base44.entities.WaitlistEntry.update(id, { status: newStatus, ...extra });
     onUpdate();
   };
 
   const handleCall = async (entry) => {
-    await handleStatus(entry.id, "chamado");
+    await handleStatus(entry.id, "chamado", { called_at: new Date().toISOString() });
     if (entry.customer_phone) {
       const phone = entry.customer_phone.replace(/\D/g, "");
       const message = encodeURIComponent(
@@ -31,11 +41,20 @@ export default function WaitlistList({ entries, onUpdate }) {
     );
   }
 
+  const sorted = sortQueue(entries);
+  const waitingOrder = sortQueue(entries.filter((e) => e.status === "aguardando"));
+  const positionOf = (id) => waitingOrder.findIndex((e) => e.id === id) + 1;
+
   return (
     <div className="space-y-3">
       <AnimatePresence>
-        {entries.map((entry, index) => {
+        {sorted.map((entry) => {
           const isCalled = entry.status === "chamado";
+          const calledMinutes = isCalled ? minutesSince(entry.called_at) : 0;
+          const isOverdue = isCalled && entry.called_at && calledMinutes > callTimeoutMinutes;
+          const waitMinutes = minutesSince(entry.created_date);
+          const position = entry.status === "aguardando" ? positionOf(entry.id) : null;
+
           return (
             <motion.div
               key={entry.id}
@@ -44,7 +63,9 @@ export default function WaitlistList({ entries, onUpdate }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -100 }}
               className={`bg-card rounded-2xl border shadow-sm overflow-hidden ${
-                isCalled
+                isOverdue
+                  ? "border-red-400 ring-2 ring-red-200"
+                  : isCalled
                   ? "border-primary ring-2 ring-primary/20"
                   : "border-border"
               }`}
@@ -53,23 +74,37 @@ export default function WaitlistList({ entries, onUpdate }) {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                        isCalled
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                        isOverdue
+                          ? "bg-red-500 text-white animate-pulse"
+                          : isCalled
                           ? "bg-primary text-primary-foreground animate-pulse"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {index + 1}º
+                      {position ? `${position}º` : <Bell className="w-4 h-4" />}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground">
+                      <h3 className="font-semibold text-foreground flex items-center gap-1.5">
                         {entry.customer_name}
+                        {entry.priority && (
+                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                        )}
                       </h3>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
                           <Users className="w-3.5 h-3.5" />
                           {entry.party_size}p
                         </span>
+                        <span className="flex items-center gap-1">
+                          <Timer className="w-3.5 h-3.5" />
+                          {waitMinutes}min
+                        </span>
+                        {entry.quoted_wait_minutes ? (
+                          <span className="text-xs">
+                            Est: {entry.quoted_wait_minutes}min
+                          </span>
+                        ) : null}
                         {entry.customer_phone && (
                           <span className="flex items-center gap-1">
                             <Phone className="w-3.5 h-3.5" />
@@ -79,12 +114,22 @@ export default function WaitlistList({ entries, onUpdate }) {
                       </div>
                     </div>
                   </div>
-                  {isCalled && (
+                  {isOverdue ? (
+                    <Badge className="bg-red-500 text-white border-0 text-xs animate-pulse">
+                      Chamado há {calledMinutes}min
+                    </Badge>
+                  ) : isCalled ? (
                     <Badge className="bg-primary text-primary-foreground border-0 text-xs animate-pulse">
                       Chamado
                     </Badge>
-                  )}
+                  ) : null}
                 </div>
+
+                {entry.notes && (
+                  <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 mb-3">
+                    {entry.notes}
+                  </p>
+                )}
 
                 <div className="flex gap-2">
                   {!isCalled && (
@@ -109,16 +154,34 @@ export default function WaitlistList({ entries, onUpdate }) {
                   )}
                   <Button
                     size="sm"
-                    onClick={() => handleStatus(entry.id, "sentado")}
+                    onClick={() =>
+                      handleStatus(entry.id, "sentado", {
+                        seated_at: new Date().toISOString(),
+                      })
+                    }
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs"
                   >
                     <Armchair className="w-3.5 h-3.5 mr-1" />
                     Sentar
                   </Button>
+                  {isOverdue && (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        handleStatus(entry.id, "no_show", {
+                          removed_at: new Date().toISOString(),
+                        })
+                      }
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+                      Marcar no-show
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleStatus(entry.id, "removido")}
+                    onClick={() => setRemoveTarget(entry)}
                     className="rounded-xl text-xs border-red-200 text-red-500 hover:bg-red-50"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -129,6 +192,12 @@ export default function WaitlistList({ entries, onUpdate }) {
           );
         })}
       </AnimatePresence>
+
+      <RemoveWaitlistDialog
+        entry={removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        onSuccess={onUpdate}
+      />
     </div>
   );
 }

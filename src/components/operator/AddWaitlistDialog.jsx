@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ const emptyForm = {
   customer_email: "",
   party_size: 2,
   priority: false,
+  quoted_wait_minutes: "",
   notes: "",
 };
 
@@ -28,11 +30,14 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurant
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const { quoted_wait_minutes, ...rest } = form;
     await base44.entities.WaitlistEntry.create({
-      ...form,
+      ...rest,
       customer_phone: form.customer_phone ? `+55${form.customer_phone.replace(/\D/g, "")}` : "",
       party_size: Number(form.party_size),
+      ...(quoted_wait_minutes ? { quoted_wait_minutes: Number(quoted_wait_minutes) } : {}),
       status: "aguardando",
+      service_date: format(new Date(), "yyyy-MM-dd"),
       restaurant_id: restaurantId,
     });
     setSaving(false);
@@ -95,6 +100,17 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurant
               min={1}
               value={form.party_size}
               onChange={(e) => setForm({ ...form, party_size: e.target.value })}
+              className="rounded-xl mt-1"
+            />
+          </div>
+          <div>
+            <Label>Espera estimada (min)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={form.quoted_wait_minutes}
+              onChange={(e) => setForm({ ...form, quoted_wait_minutes: e.target.value })}
+              placeholder="Ex: 20"
               className="rounded-xl mt-1"
             />
           </div>
