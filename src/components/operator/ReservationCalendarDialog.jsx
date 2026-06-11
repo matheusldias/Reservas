@@ -34,8 +34,9 @@ export default function ReservationCalendarDialog({ open, onClose, restaurantId,
 
   const countsByDate = useMemo(() => {
     const map = {};
+    const openStatuses = ["aguardando", "confirmada", "sentada"];
     reservations.forEach((r) => {
-      if (r.status === "cancelada") return;
+      if (!openStatuses.includes(r.status)) return;
       if (!map[r.date]) map[r.date] = { reservas: 0, pessoas: 0 };
       map[r.date].reservas += 1;
       map[r.date].pessoas += r.party_size || 0;
