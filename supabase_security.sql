@@ -21,7 +21,7 @@ as $$
   select exists (
     select 1 from public.staff_profiles
     where id = auth.uid()
-      and (role = 'admin' or app_role = 'admin')
+      and role = 'admin'
   );
 $$;
 

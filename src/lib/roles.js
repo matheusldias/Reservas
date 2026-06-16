@@ -1,8 +1,10 @@
-// Papel efetivo do usuário: "admin" (role nativo), "gerente" ou "hostess" (app_role).
+// Papel efetivo do usuário, lido da coluna `role` de staff_profiles:
+// "admin", "gerente" ou "hostess".
 export function getAppRole(user) {
   if (!user) return null;
-  if (user.role === "admin") return "admin";
-  return user.app_role || null;
+  const r = user.role;
+  if (r === "admin" || r === "gerente" || r === "hostess") return r;
+  return null;
 }
 
 export const ROLE_LABELS = {

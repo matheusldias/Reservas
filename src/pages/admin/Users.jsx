@@ -108,9 +108,9 @@ export default function Users() {
               {roleBadge(u)}
               {isAdmin && u.role !== "admin" ? (
                 <Select
-                  value={u.app_role || ""}
+                  value={u.role || ""}
                   onValueChange={(value) =>
-                    updateUser(u, { app_role: value }, "Papel atualizado!")
+                    updateUser(u, { role: value }, "Papel atualizado!")
                   }
                 >
                   <SelectTrigger className="rounded-xl w-32 h-9 text-xs">

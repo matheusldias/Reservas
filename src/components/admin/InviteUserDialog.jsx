@@ -19,7 +19,7 @@ import {
 
 export default function InviteUserDialog({ open, onClose, restaurants, onInvited }) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("user");
+  const [role, setRole] = useState("hostess");
   const [restaurantId, setRestaurantId] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -40,14 +40,14 @@ export default function InviteUserDialog({ open, onClose, restaurants, onInvited
       // User already registered — just update their profile
       await supabase
         .from("staff_profiles")
-        .update({ app_role: role, restaurant_id: restaurantId || null })
+        .update({ role, restaurant_id: restaurantId || null })
         .eq("email", email);
       setMessage("Perfil do usuário atualizado.");
     } else {
       // Create a pending profile record so when the user registers, it gets picked up
       await supabase.from("staff_profiles").insert({
         email,
-        app_role: role,
+        role,
         restaurant_id: restaurantId || null,
       });
       setMessage(`Convite preparado. O usuário ${email} deve criar uma conta em /register.`);
