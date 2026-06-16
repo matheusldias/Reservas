@@ -33,6 +33,10 @@ as $$
   select restaurant_id from public.staff_profiles where id = auth.uid();
 $$;
 
+-- helpers internos não devem ser chamáveis pelo público
+revoke all on function public.is_admin(), public.my_restaurant_id() from public, anon;
+grant execute on function public.is_admin(), public.my_restaurant_id() to authenticated;
+
 
 -- ---------------------------------------------------------------------
 -- 2. LIGAR RLS EM TODAS AS TABELAS
@@ -253,11 +257,12 @@ returns table (status text, customer_name text, party_size int, queue_position i
 language plpgsql security definer stable
 set search_path = public
 as $$
-declare v_rid uuid; v_date date; v_status text; v_prio boolean; v_created timestamptz;
+#variable_conflict use_column
+declare v_rid uuid; v_date date; v_prio boolean; v_created timestamptz;
 begin
-  select restaurant_id, service_date, status, priority, created_at
-    into v_rid, v_date, v_status, v_prio, v_created
-  from public.waitlist_entries where id = p_entry_id;
+  select e.restaurant_id, e.service_date, e.priority, e.created_at
+    into v_rid, v_date, v_prio, v_created
+  from public.waitlist_entries e where e.id = p_entry_id;
 
   if not found then return; end if;
 
