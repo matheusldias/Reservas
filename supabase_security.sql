@@ -212,6 +212,7 @@ returns table (id uuid, queue_position int)
 language plpgsql security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare v_customer_id uuid; v_id uuid;
 begin
   -- respeita fila pausada
@@ -245,8 +246,8 @@ begin
         and w.service_date = p_service_date
         and w.status = 'aguardando'
         and (case when w.priority then 0 else 1 end, w.created_at) <=
-            (select case when priority then 0 else 1 end, created_at
-             from public.waitlist_entries where id = v_id)
+            (select case when x.priority then 0 else 1 end, x.created_at
+             from public.waitlist_entries x where x.id = v_id)
     );
 end;
 $$;
