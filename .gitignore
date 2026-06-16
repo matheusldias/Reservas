@@ -29,3 +29,6 @@ dist-ssr
 
 .env
 .vite
+
+# SQL de seguranca (manter so local)
+supabase_security.sql
