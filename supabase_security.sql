@@ -204,7 +204,7 @@ $$;
 create or replace function public.public_join_queue(
   p_restaurant_id uuid, p_name text, p_phone text,
   p_party_size int, p_service_date date)
-returns table (id uuid, position int)
+returns table (id uuid, queue_position int)
 language plpgsql security definer
 set search_path = public
 as $$
@@ -249,7 +249,7 @@ $$;
 
 -- 5.7 Status da própria entrada na fila (posição calculada no servidor)
 create or replace function public.public_queue_status(p_entry_id uuid)
-returns table (status text, customer_name text, party_size int, position int)
+returns table (status text, customer_name text, party_size int, queue_position int)
 language plpgsql security definer stable
 set search_path = public
 as $$

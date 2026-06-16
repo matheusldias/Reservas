@@ -64,7 +64,7 @@ export default function QueuePage() {
         status: row.status,
         customer_name: row.customer_name,
         party_size: row.party_size,
-        _position: row.position,
+        _position: row.queue_position,
       });
       if (TERMINAL_STATUSES.includes(row.status)) {
         localStorage.removeItem(storageKey(restaurantId));
