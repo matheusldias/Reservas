@@ -269,7 +269,7 @@ begin
 
   return query
   select
-    we.status,
+    we.status::text,
     we.customer_name,
     we.party_size,
     case when we.status = 'aguardando' then (
