@@ -17,7 +17,6 @@ import { format, addDays } from "date-fns";
 import { getAvailableSlots } from "@/lib/publicSlots";
 import { checkCapacity, toMinutes } from "@/lib/capacity";
 import { normalizePhone, formatPhoneMask } from "@/lib/phone";
-import { linkCustomer } from "@/lib/customers";
 
 export default function ReservePage() {
   const [step, setStep] = useState(1); // 1: booking, 2: user data
@@ -37,10 +36,9 @@ export default function ReservePage() {
   const { data: restaurants = [] } = useQuery({
     queryKey: ["public-restaurant", restaurantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("restaurants")
-        .select("*")
-        .eq("id", restaurantId);
+      const { data, error } = await supabase.rpc("public_get_restaurant", {
+        p_id: restaurantId,
+      });
       if (error) throw error;
       return data;
     },
@@ -50,10 +48,9 @@ export default function ReservePage() {
   const { data: rooms = [] } = useQuery({
     queryKey: ["public-rooms", restaurantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("dining_rooms")
-        .select("*")
-        .eq("restaurant_id", restaurantId);
+      const { data, error } = await supabase.rpc("public_get_dining_rooms", {
+        p_restaurant_id: restaurantId,
+      });
       if (error) throw error;
       return data;
     },
@@ -80,16 +77,15 @@ export default function ReservePage() {
     setError("");
 
     const durationMinutes = restaurant?.default_duration_minutes || 90;
-    const { data: dayReservations } = await supabase
-      .from("reservations")
-      .select("*")
-      .eq("restaurant_id", restaurantId)
-      .eq("date", date)
-      .eq("dining_room_id", roomId);
+    const { data: occupancy } = await supabase.rpc("public_room_occupancy", {
+      p_restaurant_id: restaurantId,
+      p_dining_room_id: roomId,
+      p_date: date,
+    });
 
     const capacityInfo = checkCapacity({
       room,
-      reservations: dayReservations || [],
+      reservations: occupancy || [],
       date,
       time: toMinutes(time),
       durationMinutes,
@@ -103,21 +99,22 @@ export default function ReservePage() {
       return;
     }
 
-    const customerId = await linkCustomer(restaurantId, { name, phone, email });
-    await supabase.from("reservations").insert({
-      customer_name: name,
-      customer_phone: normalizePhone(phone),
-      customer_email: email,
-      date,
-      start_min: toMinutes(time),
-      duration_minutes: durationMinutes,
-      party_size: Number(partySize),
-      dining_room_id: roomId,
-      status: "aguardando",
-      restaurant_id: restaurantId,
-      ...(customerId ? { customer_id: customerId } : {}),
+    const { error: rpcError } = await supabase.rpc("public_create_reservation", {
+      p_restaurant_id: restaurantId,
+      p_dining_room_id: roomId,
+      p_name: name,
+      p_phone: normalizePhone(phone),
+      p_email: email || "",
+      p_date: date,
+      p_start_min: toMinutes(time),
+      p_duration_minutes: durationMinutes,
+      p_party_size: Number(partySize),
     });
     setSaving(false);
+    if (rpcError) {
+      setError("Não foi possível concluir a reserva. Tente novamente.");
+      return;
+    }
     setDone(true);
   };
 

@@ -8,7 +8,7 @@ export default function ChooseRestaurantPage() {
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey: ["public-restaurants"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("restaurants").select("*");
+      const { data, error } = await supabase.rpc("public_list_restaurants");
       if (error) throw error;
       return data;
     },
