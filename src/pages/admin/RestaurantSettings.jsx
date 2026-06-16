@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Store, Plus, Edit2, Trash2, CalendarClock, Users, Copy } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -18,14 +18,18 @@ export default function RestaurantSettings() {
 
   const { data: restaurants = [] } = useQuery({
     queryKey: ["restaurants"],
-    queryFn: () => base44.entities.Restaurant.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("restaurants").select("*");
+      if (error) throw error;
+      return data;
+    },
   });
 
   const refetch = () =>
     queryClient.invalidateQueries({ queryKey: ["restaurants"] });
 
   const handleDelete = async (r) => {
-    await base44.entities.Restaurant.delete(r.id);
+    await supabase.from("restaurants").delete().eq("id", r.id);
     refetch();
     toast({ title: "Restaurante removido!" });
   };

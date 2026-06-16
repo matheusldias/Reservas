@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -35,15 +35,18 @@ export default function CustomerEditDialog({ customer, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await base44.entities.Customer.update(customer.id, {
-      name: form.name,
-      email: form.email,
-      ...(form.birthday ? { birthday: form.birthday } : {}),
-      tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      notes: form.notes,
-      vip: form.vip,
-      marketing_consent: form.marketing_consent,
-    });
+    await supabase
+      .from("customers")
+      .update({
+        name: form.name,
+        email: form.email,
+        ...(form.birthday ? { birthday: form.birthday } : {}),
+        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        notes: form.notes,
+        vip: form.vip,
+        marketing_consent: form.marketing_consent,
+      })
+      .eq("id", customer.id);
     setSaving(false);
     onSaved();
     onClose();

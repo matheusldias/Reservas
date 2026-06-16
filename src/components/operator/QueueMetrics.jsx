@@ -9,7 +9,7 @@ export default function QueueMetrics({ entries }) {
 
   const seatedWaits = entries
     .filter((e) => e.status === "sentado" && e.seated_at)
-    .map((e) => (parseDbDate(e.seated_at) - parseDbDate(e.created_date)) / 60000)
+    .map((e) => (parseDbDate(e.seated_at) - parseDbDate(e.created_at)) / 60000)
     .filter((m) => m >= 0);
   const avgWait =
     seatedWaits.length > 0

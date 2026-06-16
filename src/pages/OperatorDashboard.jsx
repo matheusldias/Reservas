@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import React, { useState, useEffect } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { useRestaurant } from "@/lib/RestaurantContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,29 +29,41 @@ export default function OperatorDashboard() {
 
   const toggleQueuePause = async () => {
     if (!restaurant) return;
-    await base44.entities.Restaurant.update(restaurant.id, {
-      queue_paused: !restaurant.queue_paused,
-    });
+    await supabase
+      .from("restaurants")
+      .update({ queue_paused: !restaurant.queue_paused })
+      .eq("id", restaurant.id);
     refetchRestaurants();
   };
 
   const { data: reservations = [], refetch: refetchReservations } = useQuery({
     queryKey: ["reservations", selectedDate, restaurant?.id],
-    queryFn: () =>
-      base44.entities.Reservation.filter({
-        date: selectedDate,
-        restaurant_id: restaurant.id,
-      }),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*")
+        .eq("date", selectedDate)
+        .eq("restaurant_id", restaurant.id);
+      if (error) throw error;
+      return data;
+    },
     enabled: !!restaurant,
+    placeholderData: keepPreviousData,
   });
 
   const { data: todayWaitlist = [], refetch: refetchWaitlist } = useQuery({
     queryKey: ["waitlist", restaurant?.id, today],
-    queryFn: () => base44.entities.WaitlistEntry.filter(
-      { restaurant_id: restaurant.id, service_date: today },
-      "created_date",
-      200
-    ),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("waitlist_entries")
+        .select("*")
+        .eq("restaurant_id", restaurant.id)
+        .eq("service_date", today)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      return data;
+    },
     enabled: !!restaurant,
   });
 
@@ -67,6 +79,36 @@ export default function OperatorDashboard() {
     refetchReservations();
     refetchWaitlist();
   };
+
+  // Realtime: atualiza automaticamente quando reservas ou fila mudam
+  useEffect(() => {
+    if (!restaurant?.id) return;
+
+    const reservationsChannel = supabase
+      .channel(`operator-reservations-${restaurant.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reservations" },
+        (payload) => {
+          const rid = payload.new?.restaurant_id || payload.old?.restaurant_id;
+          if (rid === restaurant.id) refetchReservations();
+        }
+      )
+      .subscribe();
+
+    const waitlistChannel = supabase
+      .channel(`operator-waitlist-${restaurant.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "waitlist_entries" },
+        (payload) => {
+          const rid = payload.new?.restaurant_id || payload.old?.restaurant_id;
+          if (rid === restaurant.id) refetchWaitlist();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(reservationsChannel);
+      supabase.removeChannel(waitlistChannel);
+    };
+  }, [restaurant?.id]);
 
   return (
     <div className="space-y-6">

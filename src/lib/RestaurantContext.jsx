@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 
 const RestaurantContext = createContext(null);
@@ -10,7 +10,11 @@ export function RestaurantProvider({ children }) {
 
   const { data: allRestaurants = [], refetch: refetchRestaurants } = useQuery({
     queryKey: ["restaurants"],
-    queryFn: () => base44.entities.Restaurant.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("restaurants").select("*");
+      if (error) throw error;
+      return data;
+    },
   });
 
   const [selectedId, setSelectedId] = useState(

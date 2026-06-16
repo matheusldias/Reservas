@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,59 +12,131 @@ import QueueStatusCard from "@/components/public/QueueStatusCard";
 import { sortQueue } from "@/lib/queue";
 import { normalizePhone, formatPhoneMask } from "@/lib/phone";
 import { linkCustomer } from "@/lib/customers";
+import { useCalledNotification } from "@/hooks/useCalledNotification";
+
+const TERMINAL_STATUSES = ["sentado", "removido", "no_show"];
+const storageKey = (restaurantId) => `queue_entry_${restaurantId}`;
 
 export default function QueuePage() {
+  const { restaurantId } = useParams();
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [partySize, setPartySize] = useState("2");
   const [saving, setSaving] = useState(false);
-  const [entryId, setEntryId] = useState(null);
 
-  const { restaurantId } = useParams();
-
-  const { data: restaurants = [] } = useQuery({
-    queryKey: ["public-restaurant", restaurantId],
-    queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }),
+  const [entryId, setEntryId] = useState(() => {
+    // Restore from localStorage on first render
+    return localStorage.getItem(storageKey(restaurantId)) || null;
   });
-  const restaurant = restaurants[0];
-
   const [myEntry, setMyEntry] = useState(null);
   const [waitingList, setWaitingList] = useState([]);
 
-  // Polling: busca o registro SEMPRE pelo ID a cada 5s, independente do status
+  const { data: restaurants = [] } = useQuery({
+    queryKey: ["public-restaurant", restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("id", restaurantId);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const restaurant = restaurants[0];
+
+  // Fetch waiting list for a given service_date
+  const fetchWaiting = async (serviceDate) => {
+    const { data } = await supabase
+      .from("waitlist_entries")
+      .select("*")
+      .eq("status", "aguardando")
+      .eq("restaurant_id", restaurantId)
+      .eq("service_date", serviceDate);
+    if (data) setWaitingList(data);
+  };
+
   useEffect(() => {
     if (!entryId) return;
-    let active = true;
 
-    const fetchStatus = async () => {
-      try {
-        const results = await base44.entities.WaitlistEntry.filter({ id: entryId });
-        if (!active || results.length === 0) return;
-        const entry = results[0];
-        setMyEntry(entry);
-
-        if (entry.status === "aguardando") {
-          const waiting = await base44.entities.WaitlistEntry.filter({
-            status: "aguardando",
-            restaurant_id: restaurantId,
-            service_date: entry.service_date,
-          });
-          if (active) setWaitingList(waiting);
-        }
-      } catch {
-        // mantém o último estado e tenta novamente no próximo ciclo
+    // Fetch this entry's current state
+    const fetchMyEntry = async () => {
+      const { data } = await supabase
+        .from("waitlist_entries")
+        .select("*")
+        .eq("id", entryId)
+        .single();
+      if (!data) {
+        // Entry not found — clear storage
+        localStorage.removeItem(storageKey(restaurantId));
+        setEntryId(null);
+        return;
+      }
+      setMyEntry(data);
+      if (data.status === "aguardando") {
+        fetchWaiting(data.service_date);
+      }
+      if (TERMINAL_STATUSES.includes(data.status)) {
+        localStorage.removeItem(storageKey(restaurantId));
       }
     };
 
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
+    fetchMyEntry();
+
+    // Subscribe to changes on THIS entry
+    const myChannel = supabase
+      .channel(`queue-my-${entryId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "waitlist_entries", filter: `id=eq.${entryId}` },
+        (payload) => {
+          setMyEntry(payload.new);
+          if (payload.new.status === "aguardando") {
+            fetchWaiting(payload.new.service_date);
+          }
+          if (TERMINAL_STATUSES.includes(payload.new.status)) {
+            localStorage.removeItem(storageKey(restaurantId));
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to ALL waitlist changes to update position and my entry
+    const listChannel = supabase
+      .channel(`queue-list-${restaurantId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "waitlist_entries" },
+        async (payload) => {
+          const rid = payload.new?.restaurant_id || payload.old?.restaurant_id;
+          if (rid !== restaurantId) return;
+
+          // If MY entry changed, update it directly from payload
+          if (payload.new?.id === entryId) {
+            setMyEntry(payload.new);
+            if (TERMINAL_STATUSES.includes(payload.new.status)) {
+              localStorage.removeItem(storageKey(restaurantId));
+            }
+          }
+
+          // Refresh waiting list for position updates
+          const { data: myData } = await supabase
+            .from("waitlist_entries")
+            .select("service_date, status")
+            .eq("id", entryId)
+            .single();
+          if (myData?.status === "aguardando") fetchWaiting(myData.service_date);
+        }
+      )
+      .subscribe();
+
     return () => {
-      active = false;
-      clearInterval(interval);
+      supabase.removeChannel(myChannel);
+      supabase.removeChannel(listChannel);
     };
   }, [entryId, restaurantId]);
 
-  const myPosition = myEntry
+  useCalledNotification(myEntry);
+
+  const myPosition = myEntry && myEntry.status === "aguardando"
     ? sortQueue(waitingList).findIndex((e) => e.id === myEntry.id) + 1
     : 0;
 
@@ -73,17 +145,24 @@ export default function QueuePage() {
     setSaving(true);
     const today = format(new Date(), "yyyy-MM-dd");
     const customerId = await linkCustomer(restaurantId, { name, phone });
-    const entry = await base44.entities.WaitlistEntry.create({
-      customer_name: name,
-      customer_phone: normalizePhone(phone),
-      party_size: Number(partySize),
-      status: "aguardando",
-      service_date: today,
-      restaurant_id: restaurantId,
-      ...(customerId ? { customer_id: customerId } : {}),
-    });
+    const { data: entry } = await supabase
+      .from("waitlist_entries")
+      .insert({
+        customer_name: name,
+        customer_phone: normalizePhone(phone),
+        party_size: Number(partySize),
+        status: "aguardando",
+        service_date: today,
+        restaurant_id: restaurantId,
+        ...(customerId ? { customer_id: customerId } : {}),
+      })
+      .select()
+      .single();
     setSaving(false);
-    setEntryId(entry.id);
+    if (entry) {
+      localStorage.setItem(storageKey(restaurantId), entry.id);
+      setEntryId(entry.id);
+    }
   };
 
   if (entryId) {

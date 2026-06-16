@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { normalizePhone, formatPhoneMask } from "@/lib/phone";
 import { linkCustomer } from "@/lib/customers";
@@ -52,7 +52,7 @@ export default function AddWaitlistDialog({ open, onClose, onSuccess, restaurant
       email: form.customer_email,
     });
     const { quoted_wait_minutes, ...rest } = form;
-    await base44.entities.WaitlistEntry.create({
+    await supabase.from("waitlist_entries").insert({
       ...rest,
       customer_phone: normalizePhone(form.customer_phone),
       ...(customerId ? { customer_id: customerId } : {}),

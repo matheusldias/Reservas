@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useRestaurant } from "@/lib/RestaurantContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,8 +34,13 @@ export default function BookingSettings() {
   }, [restaurant]);
 
   const mutation = useMutation({
-    mutationFn: async (data) =>
-      base44.entities.Restaurant.update(restaurant.id, data),
+    mutationFn: async (data) => {
+      const { error } = await supabase
+        .from("restaurants")
+        .update(data)
+        .eq("id", restaurant.id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       refetchRestaurants();
       toast({ title: "Ajustes salvos!" });

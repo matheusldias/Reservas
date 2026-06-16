@@ -6,11 +6,29 @@ import { useToast } from "@/components/ui/use-toast";
 export default function ShareLinks({ restaurant }) {
   const { toast } = useToast();
 
-  const reserveLink = `${window.location.origin}/reservar`;
+  const reserveLink = restaurant ? `${window.location.origin}/reservar/${restaurant.id}` : "";
   const queueLink = restaurant ? `${window.location.origin}/fila/${restaurant.id}` : "";
 
   const copy = (link, label) => {
-    navigator.clipboard.writeText(link);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(link).then(() => {
+        toast({ title: `${label} copiado!` });
+      }).catch(() => fallbackCopy(link, label));
+    } else {
+      fallbackCopy(link, label);
+    }
+  };
+
+  const fallbackCopy = (link, label) => {
+    const el = document.createElement("textarea");
+    el.value = link;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
     toast({ title: `${label} copiado!` });
   };
 
@@ -27,13 +45,14 @@ export default function ShareLinks({ restaurant }) {
             <div className="min-w-0">
               <p className="text-xs font-medium text-foreground">Link de Reserva</p>
               <p className="text-[11px] text-muted-foreground truncate">
-                Cliente escolhe a loja
+                {restaurant?.name || "Selecione uma loja"}
               </p>
             </div>
           </div>
           <Button
             size="sm"
             variant="outline"
+            disabled={!restaurant}
             onClick={() => copy(reserveLink, "Link de reserva")}
             className="rounded-lg text-xs shrink-0"
           >

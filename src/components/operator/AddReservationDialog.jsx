@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { checkCapacity } from "@/lib/capacity";
+import { checkCapacity, toMinutes } from "@/lib/capacity";
 import { normalizePhone, formatPhoneMask } from "@/lib/phone";
 import { linkCustomer } from "@/lib/customers";
 import useCustomerLookup from "@/hooks/useCustomerLookup";
@@ -75,18 +75,29 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
 
   const { data: rooms = [] } = useQuery({
     queryKey: ["rooms", restaurantId],
-    queryFn: () => base44.entities.DiningRoom.filter({ restaurant_id: restaurantId }),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dining_rooms")
+        .select("*")
+        .eq("restaurant_id", restaurantId);
+      if (error) throw error;
+      return data;
+    },
     enabled: !!restaurantId && open,
   });
 
   const { data: dayReservations = [] } = useQuery({
     queryKey: ["capacity-reservations", restaurantId, form.date, form.dining_room_id],
-    queryFn: () =>
-      base44.entities.Reservation.filter({
-        restaurant_id: restaurantId,
-        date: form.date,
-        dining_room_id: form.dining_room_id,
-      }),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*")
+        .eq("restaurant_id", restaurantId)
+        .eq("date", form.date)
+        .eq("dining_room_id", form.dining_room_id);
+      if (error) throw error;
+      return data;
+    },
     enabled: !!restaurantId && !!form.date && !!form.dining_room_id && open,
   });
 
@@ -95,7 +106,7 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
     room,
     reservations: dayReservations,
     date: form.date,
-    time: form.time,
+    time: form.time ? toMinutes(form.time) : null,
     durationMinutes: Number(form.duration_minutes),
     partySize: Number(form.party_size),
   });
@@ -117,8 +128,10 @@ export default function AddReservationDialog({ open, onClose, onSuccess, restaur
       phone: form.customer_phone,
       email: form.customer_email,
     });
-    await base44.entities.Reservation.create({
-      ...form,
+    const { time: timeStr, ...formRest } = form;
+    await supabase.from("reservations").insert({
+      ...formRest,
+      start_min: toMinutes(timeStr),
       customer_phone: normalizePhone(form.customer_phone),
       party_size: Number(form.party_size),
       duration_minutes: Number(form.duration_minutes),

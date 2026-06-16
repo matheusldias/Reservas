@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,10 @@ export default function RoomScheduleEditor({ room }) {
   const [blockedDates, setBlockedDates] = useState(room.blocked_dates || []);
 
   const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.DiningRoom.update(room.id, data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from("dining_rooms").update(data).eq("id", room.id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dining-rooms"] });
       toast({ title: "Grade salva!" });

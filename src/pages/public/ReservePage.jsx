@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import {
 import { CheckCircle2, CalendarClock, MapPin, Users, Clock, ChevronLeft } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { getAvailableSlots } from "@/lib/publicSlots";
-import { checkCapacity } from "@/lib/capacity";
+import { checkCapacity, toMinutes } from "@/lib/capacity";
 import { normalizePhone, formatPhoneMask } from "@/lib/phone";
 import { linkCustomer } from "@/lib/customers";
 
@@ -36,13 +36,27 @@ export default function ReservePage() {
 
   const { data: restaurants = [] } = useQuery({
     queryKey: ["public-restaurant", restaurantId],
-    queryFn: () => base44.entities.Restaurant.filter({ id: restaurantId }),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("id", restaurantId);
+      if (error) throw error;
+      return data;
+    },
   });
   const restaurant = restaurants[0];
 
   const { data: rooms = [] } = useQuery({
     queryKey: ["public-rooms", restaurantId],
-    queryFn: () => base44.entities.DiningRoom.filter({ restaurant_id: restaurantId }),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dining_rooms")
+        .select("*")
+        .eq("restaurant_id", restaurantId);
+      if (error) throw error;
+      return data;
+    },
   });
 
   const room = rooms.find((r) => r.id === roomId);
@@ -66,16 +80,18 @@ export default function ReservePage() {
     setError("");
 
     const durationMinutes = restaurant?.default_duration_minutes || 90;
-    const dayReservations = await base44.entities.Reservation.filter({
-      restaurant_id: restaurantId,
-      date,
-      dining_room_id: roomId,
-    });
+    const { data: dayReservations } = await supabase
+      .from("reservations")
+      .select("*")
+      .eq("restaurant_id", restaurantId)
+      .eq("date", date)
+      .eq("dining_room_id", roomId);
+
     const capacityInfo = checkCapacity({
       room,
-      reservations: dayReservations,
+      reservations: dayReservations || [],
       date,
-      time,
+      time: toMinutes(time),
       durationMinutes,
       partySize: Number(partySize),
     });
@@ -87,17 +103,13 @@ export default function ReservePage() {
       return;
     }
 
-    const customerId = await linkCustomer(restaurantId, {
-      name,
-      phone,
-      email,
-    });
-    await base44.entities.Reservation.create({
+    const customerId = await linkCustomer(restaurantId, { name, phone, email });
+    await supabase.from("reservations").insert({
       customer_name: name,
       customer_phone: normalizePhone(phone),
       customer_email: email,
       date,
-      time,
+      start_min: toMinutes(time),
       duration_minutes: durationMinutes,
       party_size: Number(partySize),
       dining_room_id: roomId,

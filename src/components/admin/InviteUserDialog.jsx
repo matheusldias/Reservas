@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -22,23 +22,43 @@ export default function InviteUserDialog({ open, onClose, restaurants, onInvited
   const [role, setRole] = useState("user");
   const [restaurantId, setRestaurantId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await base44.users.inviteUser(email, role);
-    if (restaurantId) {
-      const users = await base44.entities.User.filter({ email });
-      if (users[0]) {
-        await base44.entities.User.update(users[0].id, { restaurant_id: restaurantId });
-      }
+    setMessage("");
+
+    // Check if user already exists in staff_profiles
+    const { data: existing } = await supabase
+      .from("staff_profiles")
+      .select("id")
+      .eq("email", email)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      // User already registered — just update their profile
+      await supabase
+        .from("staff_profiles")
+        .update({ app_role: role, restaurant_id: restaurantId || null })
+        .eq("email", email);
+      setMessage("Perfil do usuário atualizado.");
+    } else {
+      // Create a pending profile record so when the user registers, it gets picked up
+      await supabase.from("staff_profiles").insert({
+        email,
+        app_role: role,
+        restaurant_id: restaurantId || null,
+      });
+      setMessage(`Convite preparado. O usuário ${email} deve criar uma conta em /register.`);
     }
+
     setSaving(false);
     setEmail("");
     setRole("user");
     setRestaurantId("");
     onInvited();
-    onClose();
+    setTimeout(onClose, 2000);
   };
 
   return (
@@ -66,13 +86,14 @@ export default function InviteUserDialog({ open, onClose, restaurants, onInvited
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Operador</SelectItem>
+                <SelectItem value="hostess">Operador</SelectItem>
+                <SelectItem value="gerente">Gerente</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label>Restaurante *</Label>
+            <Label>Restaurante</Label>
             <p className="text-xs text-muted-foreground mb-1">
               O usuário só terá acesso a este restaurante
             </p>
@@ -89,12 +110,17 @@ export default function InviteUserDialog({ open, onClose, restaurants, onInvited
               </SelectContent>
             </Select>
           </div>
+          {message && (
+            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+              {message}
+            </p>
+          )}
           <Button
             type="submit"
-            disabled={saving || !restaurantId}
+            disabled={saving}
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
           >
-            {saving ? "Enviando convite..." : "Convidar"}
+            {saving ? "Salvando..." : "Convidar"}
           </Button>
         </form>
       </DialogContent>

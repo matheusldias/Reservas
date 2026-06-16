@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Users as UsersIcon, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,11 @@ export default function Users() {
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("staff_profiles").select("*");
+      if (error) throw error;
+      return data;
+    },
   });
 
   // Gerente vê apenas a equipe do próprio restaurante
@@ -38,7 +42,7 @@ export default function Users() {
   const refetch = () => queryClient.invalidateQueries({ queryKey: ["users"] });
 
   const updateUser = async (u, data, message) => {
-    await base44.entities.User.update(u.id, data);
+    await supabase.from("staff_profiles").update(data).eq("id", u.id);
     refetch();
     toast({ title: message });
   };

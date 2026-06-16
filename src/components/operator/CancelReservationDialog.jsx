@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -16,10 +16,10 @@ export default function CancelReservationDialog({ reservation, onClose, onSucces
 
   const handleConfirm = async () => {
     setSaving(true);
-    await base44.entities.Reservation.update(reservation.id, {
-      status: "cancelada",
-      cancellation_reason: reason,
-    });
+    await supabase
+      .from("reservations")
+      .update({ status: "cancelada", cancellation_reason: reason })
+      .eq("id", reservation.id);
     setSaving(false);
     setReason("");
     onSuccess();

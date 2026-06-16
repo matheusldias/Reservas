@@ -1,9 +1,14 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Store, LogOut } from "lucide-react";
 
 export default function NoRestaurantScreen() {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="bg-card rounded-2xl border border-border shadow-sm p-8 max-w-md w-full text-center">
@@ -18,7 +23,7 @@ export default function NoRestaurantScreen() {
         </p>
         <Button
           variant="outline"
-          onClick={() => base44.auth.logout()}
+          onClick={handleLogout}
           className="rounded-xl"
         >
           <LogOut className="w-4 h-4 mr-2" /> Sair

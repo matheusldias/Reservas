@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +16,10 @@ export default function RemoveWaitlistDialog({ entry, onClose, onSuccess }) {
 
   const handleConfirm = async () => {
     setSaving(true);
-    await base44.entities.WaitlistEntry.update(entry.id, {
-      status: "removido",
-      removed_at: new Date().toISOString(),
-      removal_reason: reason,
-    });
+    await supabase
+      .from("waitlist_entries")
+      .update({ status: "removido", removed_at: new Date().toISOString(), removal_reason: reason })
+      .eq("id", entry.id);
     setSaving(false);
     setReason("");
     onSuccess();

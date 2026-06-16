@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/phone";
 
 // Busca cliente pelo telefone digitado (após número completo). Fail-safe.
@@ -11,10 +11,13 @@ export default function useCustomerLookup(restaurantId, phone) {
     queryKey: ["customer-lookup", restaurantId, normalized],
     queryFn: async () => {
       try {
-        return await base44.entities.Customer.filter({
-          restaurant_id: restaurantId,
-          phone: normalized,
-        });
+        const { data } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("restaurant_id", restaurantId)
+          .eq("phone", normalized)
+          .limit(1);
+        return data || [];
       } catch {
         return [];
       }

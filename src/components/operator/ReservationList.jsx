@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Clock, Users, Phone, CheckCircle, XCircle, Armchair, AlertTriangle, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import CancelReservationDialog from "./CancelReservationDialog";
 import { recordVisit, recordNoShow } from "@/lib/customers";
+import { fromMinutes } from "@/lib/capacity";
 
 const statusConfig = {
   aguardando: { label: "Aguardando", class: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -20,7 +21,7 @@ export default function ReservationList({ reservations, onUpdate }) {
   const [cancelTarget, setCancelTarget] = useState(null);
 
   const handleStatus = async (id, newStatus, extra = {}) => {
-    await base44.entities.Reservation.update(id, { status: newStatus, ...extra });
+    await supabase.from("reservations").update({ status: newStatus, ...extra }).eq("id", id);
     onUpdate();
   };
 
@@ -48,10 +49,9 @@ export default function ReservationList({ reservations, onUpdate }) {
 
     return (
       <motion.div
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, x: -100 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
       >
         <div className="p-4">
@@ -61,7 +61,7 @@ export default function ReservationList({ reservations, onUpdate }) {
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
-                  {res.time}
+                  {fromMinutes(res.start_min)}
                   {res.duration_minutes ? ` · ${res.duration_minutes}min` : ""}
                 </span>
                 <span className="flex items-center gap-1">

@@ -1,4 +1,4 @@
-// Datas do banco (created_date/updated_date) vêm SEM indicador de timezone, mas são UTC.
+// Datas do banco (created_at/updated_date) vêm SEM indicador de timezone, mas são UTC.
 // Esta função normaliza: acrescenta "Z" quando a string não tem timezone.
 export function parseDbDate(value) {
   if (!value) return null;
@@ -19,6 +19,6 @@ export function minutesSince(iso) {
 export function sortQueue(entries) {
   return [...entries].sort((a, b) => {
     if (!!a.priority !== !!b.priority) return a.priority ? -1 : 1;
-    return parseDbDate(a.created_date) - parseDbDate(b.created_date);
+    return parseDbDate(a.created_at) - parseDbDate(b.created_at);
   });
 }

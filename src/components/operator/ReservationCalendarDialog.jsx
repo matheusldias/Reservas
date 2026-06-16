@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, User, CalendarDays } from "lucide-react";
@@ -28,7 +28,14 @@ export default function ReservationCalendarDialog({ open, onClose, restaurantId,
 
   const { data: reservations = [] } = useQuery({
     queryKey: ["all-reservations", restaurantId],
-    queryFn: () => base44.entities.Reservation.filter({ restaurant_id: restaurantId }),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*")
+        .eq("restaurant_id", restaurantId);
+      if (error) throw error;
+      return data;
+    },
     enabled: open && !!restaurantId,
   });
 

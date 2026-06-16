@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Users, Phone, Bell, Armchair, X, MessageCircle, Star, Timer, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5
   }, []);
 
   const handleStatus = async (id, newStatus, extra = {}) => {
-    await base44.entities.WaitlistEntry.update(id, { status: newStatus, ...extra });
+    await supabase.from("waitlist_entries").update({ status: newStatus, ...extra }).eq("id", id);
     onUpdate();
   };
 
@@ -54,7 +54,7 @@ export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5
           const isCalled = entry.status === "chamado";
           const calledMinutes = isCalled ? minutesSince(entry.called_at) : 0;
           const isOverdue = isCalled && entry.called_at && calledMinutes > callTimeoutMinutes;
-          const waitMinutes = minutesSince(entry.created_date);
+          const waitMinutes = minutesSince(entry.created_at);
           const position = entry.status === "aguardando" ? positionOf(entry.id) : null;
 
           return (

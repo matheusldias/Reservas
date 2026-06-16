@@ -1,13 +1,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { UtensilsCrossed, MapPin, ChevronRight } from "lucide-react";
 
 export default function ChooseRestaurantPage() {
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey: ["public-restaurants"],
-    queryFn: () => base44.entities.Restaurant.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("restaurants").select("*");
+      if (error) throw error;
+      return data;
+    },
   });
 
   return (

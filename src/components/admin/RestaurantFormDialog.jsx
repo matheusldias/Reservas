@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ export default function RestaurantFormDialog({ open, onClose, restaurant, onSave
     opening_hours: "",
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -34,12 +35,15 @@ export default function RestaurantFormDialog({ open, onClose, restaurant, onSave
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError("");
+    let err;
     if (restaurant) {
-      await base44.entities.Restaurant.update(restaurant.id, form);
+      ({ error: err } = await supabase.from("restaurants").update(form).eq("id", restaurant.id));
     } else {
-      await base44.entities.Restaurant.create(form);
+      ({ error: err } = await supabase.from("restaurants").insert(form));
     }
     setSaving(false);
+    if (err) { setError(err.message); return; }
     onSaved();
     onClose();
   };
@@ -52,6 +56,9 @@ export default function RestaurantFormDialog({ open, onClose, restaurant, onSave
             {restaurant ? "Editar Restaurante" : "Novo Restaurante"}
           </DialogTitle>
         </DialogHeader>
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-2">{error}</p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label>Nome do restaurante *</Label>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -34,13 +34,22 @@ export default function DiningRooms() {
 
   const { data: rooms = [] } = useQuery({
     queryKey: ["dining-rooms", restaurant?.id],
-    queryFn: () =>
-      base44.entities.DiningRoom.filter({ restaurant_id: restaurant.id }),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dining_rooms")
+        .select("*")
+        .eq("restaurant_id", restaurant.id);
+      if (error) throw error;
+      return data;
+    },
     enabled: !!restaurant,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.DiningRoom.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from("dining_rooms").insert(data);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dining-rooms"] });
       toast({ title: "Salão criado!" });
@@ -50,7 +59,10 @@ export default function DiningRooms() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DiningRoom.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const { error } = await supabase.from("dining_rooms").update(data).eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dining-rooms"] });
       toast({ title: "Salão atualizado!" });
@@ -61,7 +73,10 @@ export default function DiningRooms() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DiningRoom.delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("dining_rooms").delete().eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dining-rooms"] });
       toast({ title: "Salão removido!" });

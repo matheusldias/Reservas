@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useRestaurant } from "@/lib/RestaurantContext";
 import { useAuth } from "@/lib/AuthContext";
 import { getAppRole } from "@/lib/roles";
@@ -23,12 +23,16 @@ export default function Customers() {
 
   const { data: customers = [], refetch } = useQuery({
     queryKey: ["customers", restaurant?.id],
-    queryFn: () =>
-      base44.entities.Customer.filter(
-        { restaurant_id: restaurant.id },
-        "-updated_date",
-        500
-      ),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("restaurant_id", restaurant.id)
+        .order("updated_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return data;
+    },
     enabled: !!restaurant,
   });
 
@@ -42,7 +46,7 @@ export default function Customers() {
   });
 
   const handleDelete = async (c) => {
-    await base44.entities.Customer.delete(c.id);
+    await supabase.from("customers").delete().eq("id", c.id);
     refetch();
   };
 

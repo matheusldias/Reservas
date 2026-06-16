@@ -1,8 +1,16 @@
 import { getAvailableSlots } from "./publicSlots";
 
 export function toMinutes(t) {
+  if (typeof t === "number") return t;
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
+}
+
+export function fromMinutes(min) {
+  if (min == null) return "";
+  const h = Math.floor(min / 60).toString().padStart(2, "0");
+  const m = (min % 60).toString().padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 const INACTIVE_STATUSES = ["cancelada", "no_show", "concluida"];
@@ -21,7 +29,7 @@ export function checkCapacity({
   if (!room || !date || !time) return null;
 
   const slots = getAvailableSlots(room, date);
-  const start = toMinutes(time);
+  const start = typeof time === "number" ? time : toMinutes(time);
   const end = start + (durationMinutes || 90);
 
   const slot = slots.find(
@@ -34,8 +42,8 @@ export function checkCapacity({
     if (r.dining_room_id !== room.id) return false;
     if (r.date !== date) return false;
     if (INACTIVE_STATUSES.includes(r.status)) return false;
-    if (!r.time) return false;
-    const rs = toMinutes(r.time);
+    if (r.start_min == null) return false;
+    const rs = r.start_min;
     const re = rs + (r.duration_minutes || 90);
     return start < re && rs < end;
   });

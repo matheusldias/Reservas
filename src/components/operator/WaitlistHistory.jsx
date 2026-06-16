@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Users, Clock } from "lucide-react";
@@ -19,12 +19,17 @@ export default function WaitlistHistory({ restaurantId }) {
 
   const { data: entries = [] } = useQuery({
     queryKey: ["waitlist-history", restaurantId, date],
-    queryFn: () =>
-      base44.entities.WaitlistEntry.filter(
-        { restaurant_id: restaurantId, service_date: date },
-        "created_date",
-        200
-      ),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("waitlist_entries")
+        .select("*")
+        .eq("restaurant_id", restaurantId)
+        .eq("service_date", date)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      return data;
+    },
     enabled: !!restaurantId,
   });
 
@@ -64,7 +69,7 @@ export default function WaitlistHistory({ restaurantId }) {
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {format(parseDbDate(entry.created_date), "HH:mm")}
+                      {format(parseDbDate(entry.created_at), "HH:mm")}
                     </span>
                     {entry.removal_reason && (
                       <span className="truncate">Motivo: {entry.removal_reason}</span>
