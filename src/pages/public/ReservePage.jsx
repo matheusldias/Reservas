@@ -17,6 +17,7 @@ import { format, addDays } from "date-fns";
 import { getAvailableSlots } from "@/lib/publicSlots";
 import { checkCapacity, toMinutes } from "@/lib/capacity";
 import { normalizePhone, formatPhoneMask } from "@/lib/phone";
+import WhatsAppOptInButton from "@/components/public/WhatsAppOptInButton";
 
 export default function ReservePage() {
   const [step, setStep] = useState(1); // 1: booking, 2: user data
@@ -130,6 +131,9 @@ export default function ReservePage() {
           <p className="text-xs text-muted-foreground">
             Sua reserva está aguardando confirmação do restaurante.
           </p>
+          <div className="mt-5">
+            <WhatsAppOptInButton label="📱 Receber avisos no WhatsApp" />
+          </div>
         </div>
       </div>
     );

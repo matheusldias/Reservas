@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Bell, Armchair, UserX } from "lucide-react";
+import WhatsAppOptInButton from "@/components/public/WhatsAppOptInButton";
 
 export default function QueueStatusCard({ entry, position }) {
   if (!entry) {
@@ -74,6 +75,9 @@ export default function QueueStatusCard({ entry, position }) {
           Aguarde ser chamado pela equipe do restaurante. Esta tela atualiza
           automaticamente.
         </p>
+        <div className="mt-4">
+          <WhatsAppOptInButton label="📱 Quero ser avisado no WhatsApp" />
+        </div>
       </>
     );
   }

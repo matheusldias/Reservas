@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import CancelReservationDialog from "./CancelReservationDialog";
 import { recordVisit, recordNoShow } from "@/lib/customers";
+import { notifyReservationConfirmation } from "@/lib/whatsapp";
 import { fromMinutes } from "@/lib/capacity";
 
 const statusConfig = {
@@ -106,7 +107,10 @@ export default function ReservationList({ reservations, onUpdate }) {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleStatus(res.id, "confirmada")}
+                  onClick={async () => {
+                    await handleStatus(res.id, "confirmada");
+                    notifyReservationConfirmation(res); // fire-and-forget
+                  }}
                   className="flex-1 rounded-xl text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
                 >
                   <CheckCircle className="w-3.5 h-3.5 mr-1" />

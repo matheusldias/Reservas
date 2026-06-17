@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { sortQueue, minutesSince } from "@/lib/queue";
 import RemoveWaitlistDialog from "./RemoveWaitlistDialog";
 import { recordVisit, recordNoShow, ensureWaitlistCustomer } from "@/lib/customers";
+import { notifyQueueCall } from "@/lib/whatsapp";
 
 export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5 }) {
   const [, setTick] = useState(0);
@@ -25,13 +26,17 @@ export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5
   const handleCall = async (entry) => {
     await ensureWaitlistCustomer(entry);
     await handleStatus(entry.id, "chamado", { called_at: new Date().toISOString() });
-    if (entry.customer_phone) {
-      const phone = entry.customer_phone.replace(/\D/g, "");
-      const message = encodeURIComponent(
-        `Olá ${entry.customer_name}! 🎉 Sua vez chegou! Sua mesa para ${entry.party_size} pessoa(s) está pronta. Por favor, dirija-se à recepção.`
-      );
-      window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
-    }
+    notifyQueueCall(entry); // fire-and-forget
+  };
+
+  // Fallback manual: abre o WhatsApp pro operador enviar na mão.
+  const handleManualWhatsApp = (entry) => {
+    if (!entry.customer_phone) return;
+    const phone = entry.customer_phone.replace(/\D/g, "");
+    const message = encodeURIComponent(
+      `Olá ${entry.customer_name}! 🎉 Sua vez chegou! Sua mesa para ${entry.party_size} pessoa(s) está pronta. Por favor, dirija-se à recepção.`
+    );
+    window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
   };
 
   if (entries.length === 0) {
@@ -147,7 +152,7 @@ export default function WaitlistList({ entries, onUpdate, callTimeoutMinutes = 5
                   {isCalled && entry.customer_phone && (
                     <Button
                       size="sm"
-                      onClick={() => handleCall(entry)}
+                      onClick={() => handleManualWhatsApp(entry)}
                       className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs"
                     >
                       <MessageCircle className="w-3.5 h-3.5 mr-1" />
