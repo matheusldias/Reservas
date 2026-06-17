@@ -32,3 +32,6 @@ dist-ssr
 
 # SQL de seguranca (manter so local)
 supabase_security.sql
+
+# SQL WhatsApp (manter so local)
+supabase_whatsapp.sql
