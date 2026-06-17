@@ -158,6 +158,11 @@ export default function ReservePage() {
                 <ChevronLeft className="w-5 h-5" />
               </button>
             )}
+            <img
+              src="/logo.svg"
+              alt="Pizza Bis"
+              className="w-10 h-10 rounded-xl object-contain flex-shrink-0"
+            />
             <div>
               <p className="text-xs text-muted-foreground">Reserve com</p>
               <p className="text-lg font-bold text-foreground">{restaurant?.name || "Restaurante"}</p>

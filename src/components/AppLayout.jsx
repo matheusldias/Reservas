@@ -69,9 +69,7 @@ export default function AppLayout() {
           <Menu className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <UtensilsCrossed className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img src="/logo.svg" alt="Pizza Bis" className="w-8 h-8 rounded-lg object-contain" />
           <span className="font-heading font-bold text-foreground">Reservas</span>
         </div>
         <div className="w-10" />
@@ -95,9 +93,7 @@ export default function AppLayout() {
           {/* Logo */}
           <div className="p-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md">
-                <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <img src="/logo.svg" alt="Pizza Bis" className="w-10 h-10 rounded-xl object-contain" />
               <div>
                 <h1 className="font-heading font-bold text-foreground text-lg">Reservas</h1>
                 <p className="text-xs text-muted-foreground capitalize">
