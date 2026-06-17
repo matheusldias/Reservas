@@ -1,44 +1,48 @@
 import { sendWhatsApp } from "@/functions/sendWhatsApp";
+import { fromMinutes } from "@/lib/capacity";
 
-// Fire-and-forget: o envio de WhatsApp nunca bloqueia o fluxo da fila/reserva.
+// Fire-and-forget: envio de WhatsApp nunca bloqueia o fluxo.
 export async function notifyWhatsApp(payload) {
   try {
-    await sendWhatsApp(payload);
+    return await sendWhatsApp(payload);
   } catch {
-    // falha de envio é registrada no NotificationLog pelo backend; nunca propaga
+    return { ok: false };
   }
 }
 
-// Template utility "confirmacao_reserva" (pago, iniciado pelo restaurante)
+// Fila: "é a sua vez". Manda texto livre (se a janela estiver aberta) ou
+// o template fila_chamada (fallback). A função serverless decide qual usar.
+export function notifyQueueCall(entry) {
+  if (!entry?.customer_phone) return Promise.resolve({ ok: false, skipped: true });
+  const partySize = String(entry.party_size ?? "");
+  return notifyWhatsApp({
+    restaurant_id: entry.restaurant_id,
+    phone: entry.customer_phone,
+    type: "fila_chamada",
+    related_entity_type: "waitlist",
+    related_entity_id: entry.id,
+    text: `Olá ${entry.customer_name}! 🎉 Sua vez chegou! Sua mesa para ${partySize} pessoa(s) está pronta. Por favor, dirija-se à recepção.`,
+    template: { name: "fila_chamada", params: [entry.customer_name, partySize] },
+  });
+}
+
+// Confirmação de reserva. start_min (int) → "HH:MM".
 export function notifyReservationConfirmation(reservation) {
-  if (!reservation?.customer_phone) return;
+  if (!reservation?.customer_phone) return Promise.resolve({ ok: false, skipped: true });
   const [y, m, d] = (reservation.date || "").split("-");
-  notifyWhatsApp({
+  const dateBR = y ? `${d}/${m}/${y}` : reservation.date;
+  const hhmm = fromMinutes(reservation.start_min);
+  const partySize = String(reservation.party_size ?? "");
+  return notifyWhatsApp({
     restaurant_id: reservation.restaurant_id,
     phone: reservation.customer_phone,
     type: "reserva_confirmacao",
     related_entity_type: "reservation",
     related_entity_id: reservation.id,
+    text: `Olá ${reservation.customer_name}! Sua reserva na Pizza Bis está confirmada para ${dateBR} às ${hhmm}, para ${partySize} pessoa(s). Até logo! 🍕`,
     template: {
-      params: [
-        reservation.customer_name,
-        `${d}/${m}/${y}`,
-        reservation.time,
-        String(reservation.party_size),
-      ],
+      name: "reserva_confirmacao",
+      params: [reservation.customer_name, dateBR, hhmm, partySize],
     },
-  });
-}
-
-// Mensagem de texto livre dentro da janela de 24h (gratuita) — só para quem deu opt-in
-export function notifyQueueEvent(entry, text, type = "outro") {
-  if (!entry?.whatsapp_opt_in || !entry?.customer_phone) return;
-  notifyWhatsApp({
-    restaurant_id: entry.restaurant_id,
-    phone: entry.customer_phone,
-    type,
-    related_entity_type: "waitlist",
-    related_entity_id: entry.id,
-    text,
   });
 }
