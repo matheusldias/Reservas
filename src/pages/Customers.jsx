@@ -8,9 +8,20 @@ import { formatPhoneMask } from "@/lib/phone";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Contact, Search, Pencil, Trash2, Star, CalendarDays } from "lucide-react";
+import { Contact, Search, Pencil, Trash2, Star, CalendarDays, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import CustomerEditDialog from "@/components/customers/CustomerEditDialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Customers() {
   const { restaurant } = useRestaurant();
@@ -18,8 +29,11 @@ export default function Customers() {
   const role = getAppRole(user);
   const canEdit = role === "admin" || role === "gerente";
 
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: customers = [], refetch } = useQuery({
     queryKey: ["customers", restaurant?.id],
@@ -45,8 +59,24 @@ export default function Customers() {
     return byName || byPhone;
   });
 
-  const handleDelete = async (c) => {
-    await supabase.from("customers").delete().eq("id", c.id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", deleteTarget.id);
+    setDeleting(false);
+    if (error) {
+      toast({
+        title: "Não foi possível excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({ title: "Cliente excluído" });
+    setDeleteTarget(null);
     refetch();
   };
 
@@ -126,7 +156,7 @@ export default function Customers() {
                     size="icon"
                     variant="ghost"
                     className="text-destructive"
-                    onClick={() => handleDelete(c)}
+                    onClick={() => setDeleteTarget(c)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -149,6 +179,47 @@ export default function Customers() {
         onClose={() => setEditing(null)}
         onSaved={refetch}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (
+                <>
+                  Você está prestes a excluir <strong>{deleteTarget.name}</strong>
+                  {deleteTarget.phone ? ` (${formatPhoneMask(deleteTarget.phone)})` : ""}.
+                  {(deleteTarget.visits_count || 0) > 0 && (
+                    <> Este cliente tem {deleteTarget.visits_count} visita
+                      {deleteTarget.visits_count !== 1 ? "s" : ""} registrada
+                      {deleteTarget.visits_count !== 1 ? "s" : ""}.</>
+                  )}
+                  {" "}Esta ação não pode ser desfeita.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Excluindo...
+                </>
+              ) : (
+                "Excluir"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

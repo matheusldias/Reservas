@@ -376,7 +376,7 @@ export default function RoomScheduleEditor({ room }) {
                     type="checkbox"
                     checked={bd.full_day !== false}
                     onChange={(e) => updateBlockedDate(i, "full_day", e.target.checked)}
-                    className="accent-[#F97316]"
+                    className="accent-[hsl(var(--primary))]"
                   />
                   Dia inteiro
                 </label>

@@ -84,8 +84,11 @@ export default function QueuePage() {
   const myPosition =
     myEntry && myEntry.status === "aguardando" ? myEntry._position || 0 : 0;
 
+  const phoneValid = normalizePhone(phone).length >= 12;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!phoneValid) return;
     setSaving(true);
     const today = format(new Date(), "yyyy-MM-dd");
     const { data, error } = await supabase.rpc("public_join_queue", {
@@ -140,11 +143,12 @@ export default function QueuePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Telefone</Label>
+              <Label>Telefone *</Label>
               <Input
                 value={phone}
                 onChange={(e) => setPhone(formatPhoneMask(e.target.value))}
                 placeholder="(00) 00000-0000"
+                required
                 className="rounded-xl mt-1"
               />
             </div>
@@ -163,7 +167,7 @@ export default function QueuePage() {
 
           <Button
             type="submit"
-            disabled={saving || !name}
+            disabled={saving || !name || !phoneValid}
             className="w-full rounded-xl h-11"
           >
             {saving ? "Entrando..." : "Entrar na Fila"}

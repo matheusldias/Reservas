@@ -67,11 +67,16 @@ export default function ReservePage() {
   );
 
   const canProceedToStep2 = roomId && date && time;
+  const phoneValid = normalizePhone(phone).length >= 12;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canProceedToStep2) {
       setStep(2);
+      return;
+    }
+    if (!phoneValid) {
+      setError("Informe um celular válido com DDD.");
       return;
     }
     setSaving(true);
@@ -312,7 +317,7 @@ export default function ReservePage() {
               </div>
 
               <div>
-                <Label>Celular</Label>
+                <Label className="text-red-500">* Celular</Label>
                 <div className="flex mt-2">
                   <span className="flex items-center px-3 h-10 border border-r-0 border-input rounded-l-lg bg-muted text-sm text-muted-foreground">
                     🇧🇷 +55
@@ -321,6 +326,7 @@ export default function ReservePage() {
                     value={phone}
                     onChange={(e) => setPhone(formatPhoneMask(e.target.value))}
                     placeholder="(11) 99999-9999"
+                    required
                     className="rounded-l-none h-10"
                   />
                 </div>
@@ -343,7 +349,7 @@ export default function ReservePage() {
 
               <Button
                 type="submit"
-                disabled={saving || !name}
+                disabled={saving || !name || !phoneValid}
                 className="w-full rounded-lg h-10 mt-6"
               >
                 {saving ? "Enviando..." : "Confirmar Reserva"}
