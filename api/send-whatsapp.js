@@ -48,7 +48,6 @@ export default async function handler(req, res) {
         type: safeType,
         related_entity_type: related_entity_type || null,
         related_entity_id: related_entity_id || null,
-        template: template?.name || null,
         status,
         ...extra,
       });
@@ -96,12 +95,17 @@ export default async function handler(req, res) {
         body: JSON.stringify(payload),
       }
     );
+    const usedTemplate = windowOpen ? null : (template?.name || null);
     const json = await r.json();
     if (!r.ok) {
-      await log("falhou", { error_message: JSON.stringify(json?.error || json).slice(0, 500) });
+      await log("falhou", {
+        template: usedTemplate,
+        error_message: JSON.stringify(json?.error || json).slice(0, 500),
+      });
       return res.status(200).json({ ok: false, error: "meta_error" });
     }
     await log("enviado", {
+      template: usedTemplate,
       provider_message_id: json?.messages?.[0]?.id || null,
       sent_at: new Date().toISOString(),
     });
