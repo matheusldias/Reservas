@@ -18,7 +18,7 @@ export function notifyQueueCall(entry) {
   return notifyWhatsApp({
     restaurant_id: entry.restaurant_id,
     phone: entry.customer_phone,
-    type: "fila_chamada",
+    type: "fila_chamado",
     related_entity_type: "waitlist",
     related_entity_id: entry.id,
     text: `Olá ${entry.customer_name}! 🎉 Sua vez chegou! Sua mesa para ${partySize} pessoa(s) está pronta. Por favor, dirija-se à recepção.`,

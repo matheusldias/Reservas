@@ -27,13 +27,16 @@ export default async function handler(req, res) {
   const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
   const { phone, text, template, type, related_entity_type, related_entity_id, restaurant_id } = body;
 
-  // helper de log (nunca lança)
+  const digits = (phone || "").replace(/\D/g, "");
+
+  // helper de log (nunca lança). Usa as colunas reais da tabela:
+  // customer_phone (NOT NULL), status/type são enums, error_message livre.
   const log = async (status, extra = {}) => {
     try {
       await supabase.from("notification_log").insert({
         restaurant_id: restaurant_id || null,
-        phone: phone || null,
-        type: type || null,
+        customer_phone: digits || "",
+        type: type || "outro",
         related_entity_type: related_entity_type || null,
         related_entity_id: related_entity_id || null,
         template: template?.name || null,
@@ -43,10 +46,9 @@ export default async function handler(req, res) {
     } catch { /* log nunca quebra o fluxo */ }
   };
 
-  // 2. Telefone inválido → ignorado
-  const digits = (phone || "").replace(/\D/g, "");
+  // 2. Telefone inválido → não envia (registra falha)
   if (digits.length < 12) {
-    await log("ignorado", { error: "telefone ausente/inválido" });
+    await log("falhou", { error_message: "telefone ausente/inválido" });
     return res.status(200).json({ ok: false, skipped: true });
   }
 
@@ -58,7 +60,7 @@ export default async function handler(req, res) {
   } catch { windowOpen = false; }
 
   if (!windowOpen && !template) {
-    await log("ignorado", { error: "janela fechada e sem template" });
+    await log("falhou", { error_message: "janela fechada e sem template" });
     return res.status(200).json({ ok: false, skipped: true });
   }
 
@@ -78,13 +80,16 @@ export default async function handler(req, res) {
     );
     const json = await r.json();
     if (!r.ok) {
-      await log("falhou", { error: JSON.stringify(json?.error || json).slice(0, 500) });
+      await log("falhou", { error_message: JSON.stringify(json?.error || json).slice(0, 500) });
       return res.status(200).json({ ok: false, error: "meta_error" });
     }
-    await log("enviado", { provider_message_id: json?.messages?.[0]?.id || null });
+    await log("enviado", {
+      provider_message_id: json?.messages?.[0]?.id || null,
+      sent_at: new Date().toISOString(),
+    });
     return res.status(200).json({ ok: true });
   } catch (e) {
-    await log("falhou", { error: String(e).slice(0, 500) });
+    await log("falhou", { error_message: String(e).slice(0, 500) });
     return res.status(200).json({ ok: false, error: "exception" });
   }
 }
