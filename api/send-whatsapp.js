@@ -29,6 +29,15 @@ export default async function handler(req, res) {
 
   const digits = (phone || "").replace(/\D/g, "");
 
+  // Normaliza o type para um valor válido do enum notification_type
+  // (resiliente a bundle antigo em cache que ainda envie "fila_chamada").
+  const VALID_TYPES = [
+    "fila_entrada", "fila_posicao", "fila_chamado",
+    "reserva_confirmacao", "reserva_lembrete", "outro",
+  ];
+  const TYPE_ALIASES = { fila_chamada: "fila_chamado" };
+  const safeType = VALID_TYPES.includes(type) ? type : (TYPE_ALIASES[type] || "outro");
+
   // helper de log (nunca lança). Usa as colunas reais da tabela:
   // customer_phone (NOT NULL), status/type são enums, error_message livre.
   const log = async (status, extra = {}) => {
@@ -36,7 +45,7 @@ export default async function handler(req, res) {
       const { error: logErr } = await supabase.from("notification_log").insert({
         restaurant_id: restaurant_id || null,
         customer_phone: digits || "",
-        type: type || "outro",
+        type: safeType,
         related_entity_type: related_entity_type || null,
         related_entity_id: related_entity_id || null,
         template: template?.name || null,
