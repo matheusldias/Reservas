@@ -1,14 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Users as UsersIcon, Plus } from "lucide-react";
+import { Users as UsersIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useRestaurant } from "@/lib/RestaurantContext";
 import { useAuth } from "@/lib/AuthContext";
 import { getAppRole, ROLE_LABELS } from "@/lib/roles";
-import InviteUserDialog from "@/components/admin/InviteUserDialog";
 import {
   Select,
   SelectContent,
@@ -23,7 +21,6 @@ export default function Users() {
   const { restaurants } = useRestaurant();
   const { user: currentUser } = useAuth();
   const isAdmin = getAppRole(currentUser) === "admin";
-  const [showInvite, setShowInvite] = useState(false);
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
@@ -62,27 +59,16 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-            <UsersIcon className="w-6 h-6 text-primary" />
-            Equipe
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isAdmin
-              ? "Crie usuários com e-mail e senha e defina o restaurante e o papel de cada um"
-              : "Equipe do seu restaurante"}
-          </p>
-        </div>
-        {isAdmin && (
-          <Button
-            onClick={() => setShowInvite(true)}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Novo Usuário
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
+          <UsersIcon className="w-6 h-6 text-primary" />
+          Equipe
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isAdmin
+            ? "Defina o restaurante e o papel de cada usuário. Novos logins são criados no painel do Supabase."
+            : "Equipe do seu restaurante"}
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -157,13 +143,6 @@ export default function Users() {
           </div>
         )}
       </div>
-
-      <InviteUserDialog
-        open={showInvite}
-        onClose={() => setShowInvite(false)}
-        restaurants={restaurants}
-        onInvited={refetch}
-      />
     </div>
   );
 }
