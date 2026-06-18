@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { Users as UsersIcon } from "lucide-react";
+import { Users as UsersIcon, Pencil, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { useRestaurant } from "@/lib/RestaurantContext";
 import { useAuth } from "@/lib/AuthContext";
@@ -21,6 +23,9 @@ export default function Users() {
   const { restaurants } = useRestaurant();
   const { user: currentUser } = useAuth();
   const isAdmin = getAppRole(currentUser) === "admin";
+
+  const [editingId, setEditingId] = useState(null);
+  const [nameValue, setNameValue] = useState("");
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ["users"],
@@ -42,6 +47,16 @@ export default function Users() {
     await supabase.from("staff_profiles").update(data).eq("id", u.id);
     refetch();
     toast({ title: message });
+  };
+
+  const startEditName = (u) => {
+    setEditingId(u.id);
+    setNameValue(u.full_name || "");
+  };
+
+  const saveName = async (u) => {
+    await updateUser(u, { full_name: nameValue.trim() || null }, "Nome atualizado!");
+    setEditingId(null);
   };
 
   const roleBadge = (u) => {
@@ -66,7 +81,7 @@ export default function Users() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           {isAdmin
-            ? "Defina o restaurante e o papel de cada usuário. Novos logins são criados no painel do Supabase."
+            ? "Defina o nome, o restaurante e o papel de cada usuário. Novos logins são criados no painel do Supabase."
             : "Equipe do seu restaurante"}
         </p>
       </div>
@@ -83,10 +98,41 @@ export default function Users() {
                   {u.full_name?.[0]?.toUpperCase() || u.email?.[0]?.toUpperCase()}
                 </span>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {u.full_name || "Sem nome"}
-                </p>
+              <div className="min-w-0 flex-1">
+                {editingId === u.id ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={nameValue}
+                      onChange={(e) => setNameValue(e.target.value)}
+                      placeholder="Nome do usuário"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveName(u);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      className="h-8 text-sm rounded-lg"
+                    />
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => saveName(u)}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => setEditingId(null)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                    {u.full_name || <span className="text-muted-foreground italic">Sem nome</span>}
+                    {isAdmin && (
+                      <button
+                        onClick={() => startEditName(u)}
+                        className="text-muted-foreground hover:text-primary"
+                        title="Editar nome"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground truncate">{u.email}</p>
               </div>
             </div>
