@@ -69,9 +69,13 @@ export default async function handler(req, res) {
   // 3. Janela aberta? decide texto livre vs template
   let windowOpen = false;
   try {
-    const { data } = await supabase.rpc("has_whatsapp_window", { p_phone: digits });
+    const { data, error: winErr } = await supabase.rpc("has_whatsapp_window", { p_phone: digits });
     windowOpen = data === true;
-  } catch { windowOpen = false; }
+    console.log("[send-whatsapp] digits=%s windowOpen=%s err=%s", digits, windowOpen, winErr?.message || "none");
+  } catch (e) {
+    windowOpen = false;
+    console.error("[send-whatsapp] has_whatsapp_window excecao:", String(e));
+  }
 
   if (!windowOpen && !template) {
     await log("falhou", { error_message: "janela fechada e sem template" });
