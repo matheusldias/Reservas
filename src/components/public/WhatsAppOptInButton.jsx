@@ -9,7 +9,7 @@ const BUSINESS_NUMBER = import.meta.env.VITE_WHATSAPP_BUSINESS_NUMBER;
 export default function WhatsAppOptInButton({ label = "Ativar avisos no WhatsApp" }) {
   if (!BUSINESS_NUMBER) return null;
   const text = encodeURIComponent(
-    "Olá! Quero receber os avisos da minha fila/reserva por aqui. 🍕"
+    "Olá! Quero receber os avisos da minha fila/reserva por aqui."
   );
   const href = `https://wa.me/${BUSINESS_NUMBER}?text=${text}`;
   return (
