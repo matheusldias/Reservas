@@ -1,0 +1,22 @@
+name: Supabase keep-alive
+
+# Mantém o projeto Supabase (plano grátis) acordado: faz um ping leve por dia
+# numa função pública que consulta o banco. Evita a pausa por 7 dias sem uso.
+
+on:
+  schedule:
+    - cron: "0 12 * * *" # todo dia às 12:00 UTC (~09:00 BRT)
+  workflow_dispatch: {} # permite rodar manualmente pelo botão "Run workflow"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase RPC
+        run: |
+          curl -sS -o /dev/null -w "HTTP %{http_code}\n" \
+            -X POST "https://fldtnhqlswxwhmcguklx.supabase.co/rest/v1/rpc/public_list_restaurants" \
+            -H "apikey: sb_publishable_yoDKSmcKdbJu2cOQEWOT8Q_jEBQQl1V" \
+            -H "Authorization: Bearer sb_publishable_yoDKSmcKdbJu2cOQEWOT8Q_jEBQQl1V" \
+            -H "Content-Type: application/json" \
+            -d "{}"
