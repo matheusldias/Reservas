@@ -359,6 +359,19 @@ export default function ReservePage() {
               >
                 {saving ? "Enviando..." : "Confirmar Reserva"}
               </Button>
+
+              <p className="text-center text-xs text-muted-foreground mt-1">
+                Ao reservar, você concorda com a{" "}
+                <a
+                  href="/privacidade"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Política de Privacidade
+                </a>
+                .
+              </p>
             </form>
           </div>
         )}

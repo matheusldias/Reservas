@@ -173,6 +173,19 @@ export default function QueuePage() {
             {saving ? "Entrando..." : "Entrar na Fila"}
           </Button>
         </form>
+
+        <p className="text-center text-xs text-muted-foreground mt-5">
+          Ao entrar na fila, você concorda com a{" "}
+          <a
+            href="/privacidade"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Política de Privacidade
+          </a>
+          .
+        </p>
       </div>
     </div>
   );
