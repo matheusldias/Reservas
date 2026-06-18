@@ -70,7 +70,7 @@ export default function Users() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {isAdmin
-              ? "Convide usuários e defina o restaurante e o papel de cada um"
+              ? "Crie usuários com e-mail e senha e defina o restaurante e o papel de cada um"
               : "Equipe do seu restaurante"}
           </p>
         </div>
@@ -80,7 +80,7 @@ export default function Users() {
             className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
           >
             <Plus className="w-4 h-4 mr-1" />
-            Convidar Usuário
+            Novo Usuário
           </Button>
         )}
       </div>
