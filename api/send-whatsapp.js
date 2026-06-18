@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   // customer_phone (NOT NULL), status/type são enums, error_message livre.
   const log = async (status, extra = {}) => {
     try {
-      await supabase.from("notification_log").insert({
+      const { error: logErr } = await supabase.from("notification_log").insert({
         restaurant_id: restaurant_id || null,
         customer_phone: digits || "",
         type: type || "outro",
@@ -43,7 +43,12 @@ export default async function handler(req, res) {
         status,
         ...extra,
       });
-    } catch { /* log nunca quebra o fluxo */ }
+      if (logErr) {
+        console.error("[notification_log] insert falhou:", logErr.code, logErr.message, logErr.details);
+      }
+    } catch (e) {
+      console.error("[notification_log] excecao:", String(e));
+    }
   };
 
   // 2. Telefone inválido → não envia (registra falha)
