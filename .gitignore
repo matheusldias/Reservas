@@ -37,3 +37,5 @@ supabase_security.sql
 supabase_whatsapp.sql
 
 supabase_staff_trigger.sql
+
+supabase_antispam.sql

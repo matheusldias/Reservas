@@ -31,10 +31,11 @@ export default function ReservePage() {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [hp, setHp] = useState(""); // honeypot anti-bot
 
   const { restaurantId } = useParams();
 
-  const { data: restaurants = [] } = useQuery({
+  const { data: restaurants = [], isFetched: restaurantFetched } = useQuery({
     queryKey: ["public-restaurant", restaurantId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("public_get_restaurant", {
@@ -71,6 +72,7 @@ export default function ReservePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hp) return; // honeypot: bot preencheu campo oculto → ignora
     if (!canProceedToStep2) {
       setStep(2);
       return;
@@ -118,11 +120,24 @@ export default function ReservePage() {
     });
     setSaving(false);
     if (rpcError) {
-      setError("Não foi possível concluir a reserva. Tente novamente.");
+      setError(rpcError.message || "Não foi possível concluir a reserva. Tente novamente.");
       return;
     }
     setDone(true);
   };
+
+  if (restaurantFetched && !restaurant) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="bg-card rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-xl font-bold text-foreground mb-2">Link inválido</h2>
+          <p className="text-sm text-muted-foreground">
+            Este link de reserva não é válido ou o restaurante está indisponível no momento.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (done) {
     return (
@@ -298,6 +313,18 @@ export default function ReservePage() {
             {/* Form */}
             <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-6 space-y-4">
               <h3 className="font-semibold text-foreground">Seus dados</h3>
+
+              {/* honeypot anti-bot (invisível) */}
+              <input
+                type="text"
+                name="website"
+                value={hp}
+                onChange={(e) => setHp(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+              />
 
               <div>
                 <Label className="text-red-500">* Nome completo</Label>

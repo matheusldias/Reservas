@@ -23,13 +23,15 @@ export default function QueuePage() {
   const [phone, setPhone] = useState("");
   const [partySize, setPartySize] = useState("2");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [hp, setHp] = useState(""); // honeypot anti-bot
 
   const [entryId, setEntryId] = useState(() =>
     localStorage.getItem(storageKey(restaurantId)) || null
   );
   const [myEntry, setMyEntry] = useState(null);
 
-  const { data: restaurants = [] } = useQuery({
+  const { data: restaurants = [], isFetched: restaurantFetched } = useQuery({
     queryKey: ["public-restaurant", restaurantId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("public_get_restaurant", {
@@ -88,10 +90,12 @@ export default function QueuePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hp) return; // honeypot: bot preencheu campo oculto → ignora
     if (!phoneValid) return;
     setSaving(true);
+    setError("");
     const today = format(new Date(), "yyyy-MM-dd");
-    const { data, error } = await supabase.rpc("public_join_queue", {
+    const { data, error: rpcError } = await supabase.rpc("public_join_queue", {
       p_restaurant_id: restaurantId,
       p_name: name,
       p_phone: normalizePhone(phone),
@@ -100,13 +104,29 @@ export default function QueuePage() {
     });
     setSaving(false);
     const row = data?.[0];
-    if (error || !row) return;
+    if (rpcError || !row) {
+      setError(rpcError?.message || "Não foi possível entrar na fila. Tente novamente.");
+      return;
+    }
     localStorage.setItem(storageKey(restaurantId), row.id);
     setEntryId(row.id);
   };
 
   if (entryId) {
     return <QueueStatusCard entry={myEntry} position={myPosition} />;
+  }
+
+  if (restaurantFetched && !restaurant) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="bg-card rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-xl font-bold text-foreground mb-2">Link inválido</h2>
+          <p className="text-sm text-muted-foreground">
+            Este link de fila não é válido ou o restaurante está indisponível no momento.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (restaurant?.queue_paused) {
@@ -130,6 +150,17 @@ export default function QueuePage() {
         <PublicHeader restaurant={restaurant} subtitle="Entre na fila de espera" />
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* honeypot anti-bot (invisível) */}
+          <input
+            type="text"
+            name="website"
+            value={hp}
+            onChange={(e) => setHp(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+          />
           <div>
             <Label>Nome *</Label>
             <Input
@@ -164,6 +195,12 @@ export default function QueuePage() {
               />
             </div>
           </div>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
 
           <Button
             type="submit"
