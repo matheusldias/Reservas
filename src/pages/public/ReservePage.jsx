@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle2, CalendarClock, MapPin, Users, Clock, ChevronLeft } from "lucide-react";
+import { CheckCircle2, CalendarClock, MapPin, Users, Clock, ChevronLeft, ChevronDown } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { getAvailableSlots } from "@/lib/publicSlots";
 import { checkCapacity, toMinutes } from "@/lib/capacity";
@@ -338,12 +338,15 @@ export default function ReservePage() {
               </div>
 
               {restaurant?.booking_rules && (
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-semibold text-sm text-foreground mb-2">Sobre a Reserva</h4>
-                  <div className="bg-muted rounded-lg p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+                <details className="border-t pt-4 mt-4 group">
+                  <summary className="flex items-center justify-between cursor-pointer list-none font-semibold text-sm text-foreground">
+                    <span>Sobre a Reserva</span>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="bg-muted rounded-lg p-3 text-xs text-muted-foreground whitespace-pre-wrap mt-2 max-h-56 overflow-y-auto">
                     {restaurant.booking_rules}
                   </div>
-                </div>
+                </details>
               )}
 
               {error && (
