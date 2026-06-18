@@ -2,16 +2,28 @@ import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useRestaurant } from "@/lib/RestaurantContext";
-import { format, subDays } from "date-fns";
+import { format, subDays, addDays, parseISO, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { BarChart3, CalendarCheck, Users, UserX, Phone } from "lucide-react";
+import { BarChart3, CalendarCheck, Users, UserX, Phone, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { formatPhoneMask } from "@/lib/phone";
+import { parseDbDate } from "@/lib/queue";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
+const todayStr = () => format(new Date(), "yyyy-MM-dd");
+
 export default function Reports() {
-  const [days, setDays] = useState(7);
   const { restaurant } = useRestaurant();
+  const [fromDate, setFromDate] = useState(format(subDays(new Date(), 6), "yyyy-MM-dd"));
+  const [toDate, setToDate] = useState(todayStr());
+
+  const setPreset = (d) => {
+    setFromDate(format(subDays(new Date(), d - 1), "yyyy-MM-dd"));
+    setToDate(todayStr());
+  };
+  const isPreset = (d) =>
+    toDate === todayStr() && fromDate === format(subDays(new Date(), d - 1), "yyyy-MM-dd");
 
   const { data: reservations = [] } = useQuery({
     queryKey: ["all-reservations", restaurant?.id],
@@ -21,7 +33,7 @@ export default function Reports() {
         .select("*")
         .eq("restaurant_id", restaurant.id)
         .order("date", { ascending: false })
-        .limit(500);
+        .limit(1000);
       if (error) throw error;
       return data;
     },
@@ -36,32 +48,31 @@ export default function Reports() {
         .select("*")
         .eq("restaurant_id", restaurant.id)
         .order("service_date", { ascending: false })
-        .limit(500);
+        .limit(1000);
       if (error) throw error;
       return data;
     },
     enabled: !!restaurant,
   });
 
+  // dentro do período (comparação de strings yyyy-MM-dd funciona)
+  const inPeriod = (dateStr) => dateStr >= fromDate && dateStr <= toDate;
+
   const stats = useMemo(() => {
-    const now = new Date();
-    const startDate = subDays(now, days);
-
-    const filtered = reservations.filter(
-      (r) => new Date(r.date) >= startDate && new Date(r.date) <= now
-    );
-
+    const filtered = reservations.filter((r) => inPeriod(r.date));
     const totalReservations = filtered.length;
     const attended = filtered.filter((r) => r.status === "sentada").length;
     const noShows = filtered.filter((r) => r.status === "no_show").length;
 
-    // Group by day
+    // gráfico por dia
+    const start = parseISO(fromDate);
+    const end = parseISO(toDate);
+    const dayCount = Math.max(0, differenceInCalendarDays(end, start) + 1);
     const byDay = {};
-    for (let i = 0; i < days; i++) {
-      const d = format(subDays(now, days - 1 - i), "yyyy-MM-dd");
+    for (let i = 0; i < Math.min(dayCount, 92); i++) {
+      const d = format(addDays(start, i), "yyyy-MM-dd");
       byDay[d] = { date: d, total: 0, attended: 0, noShows: 0 };
     }
-
     filtered.forEach((r) => {
       if (byDay[r.date]) {
         byDay[r.date].total++;
@@ -69,24 +80,16 @@ export default function Reports() {
         if (r.status === "no_show") byDay[r.date].noShows++;
       }
     });
-
     const chartData = Object.values(byDay).map((d) => ({
       ...d,
       label: format(new Date(d.date + "T12:00:00"), "dd/MM", { locale: ptBR }),
     }));
 
     return { totalReservations, attended, noShows, chartData };
-  }, [reservations, days]);
+  }, [reservations, fromDate, toDate]);
 
-  // Lista de visitas no período: reservas sentadas/concluídas + fila sentada
+  // Visitas no período: reservas sentadas/concluídas + fila sentada (com hora)
   const visits = useMemo(() => {
-    const now = new Date();
-    const startDate = subDays(now, days);
-    const inPeriod = (dateStr) => {
-      const d = new Date(dateStr + "T12:00:00");
-      return d >= startDate && d <= now;
-    };
-
     const fromReservations = reservations
       .filter((r) => ["sentada", "concluida"].includes(r.status) && inPeriod(r.date))
       .map((r) => ({
@@ -94,6 +97,7 @@ export default function Reports() {
         name: r.customer_name || "—",
         phone: r.customer_phone || "",
         origin: "Reserva",
+        hour: r.start_min != null ? Math.floor(r.start_min / 60) : null,
       }));
 
     const fromWaitlist = waitlist
@@ -103,32 +107,31 @@ export default function Reports() {
         name: w.customer_name || "—",
         phone: w.customer_phone || "",
         origin: "Fila",
+        hour: w.seated_at ? parseDbDate(w.seated_at)?.getHours() ?? null : null,
       }));
 
     return [...fromReservations, ...fromWaitlist].sort((a, b) =>
       a.date < b.date ? 1 : a.date > b.date ? -1 : 0
     );
-  }, [reservations, waitlist, days]);
+  }, [reservations, waitlist, fromDate, toDate]);
+
+  // Horários de pico
+  const peakData = useMemo(() => {
+    const byHour = {};
+    visits.forEach((v) => {
+      if (v.hour == null) return;
+      byHour[v.hour] = (byHour[v.hour] || 0) + 1;
+    });
+    return Object.keys(byHour)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((h) => ({ label: `${h}h`, count: byHour[h] }));
+  }, [visits]);
 
   const statCards = [
-    {
-      label: "Total de Reservas",
-      value: stats.totalReservations,
-      icon: CalendarCheck,
-      color: "bg-primary/10 text-primary",
-    },
-    {
-      label: "Clientes Atendidos",
-      value: stats.attended,
-      icon: Users,
-      color: "bg-green-100 text-green-600",
-    },
-    {
-      label: "No-shows",
-      value: stats.noShows,
-      icon: UserX,
-      color: "bg-red-100 text-red-500",
-    },
+    { label: "Total de Reservas", value: stats.totalReservations, icon: CalendarCheck, color: "bg-primary/10 text-primary" },
+    { label: "Clientes Atendidos", value: stats.attended, icon: Users, color: "bg-green-100 text-green-600" },
+    { label: "No-shows", value: stats.noShows, icon: UserX, color: "bg-red-100 text-red-500" },
   ];
 
   return (
@@ -138,19 +141,17 @@ export default function Reports() {
           <BarChart3 className="w-6 h-6 text-primary" />
           Relatórios
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Visão geral do desempenho
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Visão geral do desempenho</p>
       </div>
 
-      {/* Period Filter */}
-      <div className="flex gap-2">
+      {/* Filtro de período */}
+      <div className="flex flex-wrap items-center gap-2">
         {[7, 14, 30].map((d) => (
           <button
             key={d}
-            onClick={() => setDays(d)}
+            onClick={() => setPreset(d)}
             className={`px-4 py-2 text-sm rounded-xl border transition-colors ${
-              days === d
+              isPreset(d)
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-card text-muted-foreground border-border hover:border-primary/30"
             }`}
@@ -158,15 +159,30 @@ export default function Reports() {
             {d} dias
           </button>
         ))}
+        <div className="flex items-center gap-2 ml-auto">
+          <Input
+            type="date"
+            value={fromDate}
+            max={toDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="rounded-xl h-10 w-auto"
+          />
+          <span className="text-muted-foreground text-sm">até</span>
+          <Input
+            type="date"
+            value={toDate}
+            min={fromDate}
+            max={todayStr()}
+            onChange={(e) => setToDate(e.target.value)}
+            className="rounded-xl h-10 w-auto"
+          />
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {statCards.map((card) => (
-          <div
-            key={card.label}
-            className="bg-card rounded-2xl border border-border p-5 shadow-sm"
-          >
+          <div key={card.label} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${card.color}`}>
                 <card.icon className="w-5 h-5" />
@@ -180,7 +196,7 @@ export default function Reports() {
         ))}
       </div>
 
-      {/* Chart */}
+      {/* Reservas por Dia */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <h3 className="font-semibold text-foreground mb-4">Reservas por Dia</h3>
         <div className="h-64">
@@ -188,29 +204,39 @@ export default function Reports() {
             <BarChart data={stats.chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="label" fontSize={12} />
-              <YAxis fontSize={12} />
+              <YAxis fontSize={12} allowDecimals={false} />
               <Tooltip />
-              <Bar
-                dataKey="total"
-                name="Total"
-                fill="hsl(25, 95%, 53%)"
-                radius={[6, 6, 0, 0]}
-              />
-              <Bar
-                dataKey="attended"
-                name="Atendidos"
-                fill="hsl(142, 60%, 45%)"
-                radius={[6, 6, 0, 0]}
-              />
-              <Bar
-                dataKey="noShows"
-                name="No-shows"
-                fill="hsl(0, 70%, 55%)"
-                radius={[6, 6, 0, 0]}
-              />
+              <Bar dataKey="total" name="Total" fill="hsl(354, 100%, 32%)" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="attended" name="Atendidos" fill="hsl(142, 60%, 45%)" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="noShows" name="No-shows" fill="hsl(0, 70%, 55%)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      {/* Horários de pico */}
+      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+        <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-primary" />
+          Horários de Pico
+        </h3>
+        {peakData.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Sem visitas com horário registrado neste período.
+          </p>
+        ) : (
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={peakData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" fontSize={12} />
+                <YAxis fontSize={12} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="count" name="Visitas" fill="hsl(33, 90%, 50%)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* Visitas no período */}
@@ -228,7 +254,6 @@ export default function Reports() {
           </p>
         ) : (
           <div className="divide-y divide-border">
-            {/* Cabeçalho (desktop) */}
             <div className="hidden sm:grid grid-cols-[110px_1fr_160px_90px] gap-3 pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
               <span>Data</span>
               <span>Cliente</span>
