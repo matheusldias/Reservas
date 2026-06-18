@@ -4,7 +4,9 @@ import { supabase } from "@/lib/supabase";
 import { useRestaurant } from "@/lib/RestaurantContext";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { BarChart3, CalendarCheck, Users, UserX } from "lucide-react";
+import { BarChart3, CalendarCheck, Users, UserX, Phone } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { formatPhoneMask } from "@/lib/phone";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function Reports() {
@@ -19,6 +21,21 @@ export default function Reports() {
         .select("*")
         .eq("restaurant_id", restaurant.id)
         .order("date", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!restaurant,
+  });
+
+  const { data: waitlist = [] } = useQuery({
+    queryKey: ["all-waitlist", restaurant?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("waitlist_entries")
+        .select("*")
+        .eq("restaurant_id", restaurant.id)
+        .order("service_date", { ascending: false })
         .limit(500);
       if (error) throw error;
       return data;
@@ -60,6 +77,38 @@ export default function Reports() {
 
     return { totalReservations, attended, noShows, chartData };
   }, [reservations, days]);
+
+  // Lista de visitas no período: reservas sentadas/concluídas + fila sentada
+  const visits = useMemo(() => {
+    const now = new Date();
+    const startDate = subDays(now, days);
+    const inPeriod = (dateStr) => {
+      const d = new Date(dateStr + "T12:00:00");
+      return d >= startDate && d <= now;
+    };
+
+    const fromReservations = reservations
+      .filter((r) => ["sentada", "concluida"].includes(r.status) && inPeriod(r.date))
+      .map((r) => ({
+        date: r.date,
+        name: r.customer_name || "—",
+        phone: r.customer_phone || "",
+        origin: "Reserva",
+      }));
+
+    const fromWaitlist = waitlist
+      .filter((w) => w.status === "sentado" && inPeriod(w.service_date))
+      .map((w) => ({
+        date: w.service_date,
+        name: w.customer_name || "—",
+        phone: w.customer_phone || "",
+        origin: "Fila",
+      }));
+
+    return [...fromReservations, ...fromWaitlist].sort((a, b) =>
+      a.date < b.date ? 1 : a.date > b.date ? -1 : 0
+    );
+  }, [reservations, waitlist, days]);
 
   const statCards = [
     {
@@ -162,6 +211,65 @@ export default function Reports() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      {/* Visitas no período */}
+      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-foreground">Clientes que vieram</h3>
+          <Badge variant="outline" className="text-xs">
+            {visits.length} visita{visits.length !== 1 ? "s" : ""}
+          </Badge>
+        </div>
+
+        {visits.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Nenhuma visita registrada neste período.
+          </p>
+        ) : (
+          <div className="divide-y divide-border">
+            {/* Cabeçalho (desktop) */}
+            <div className="hidden sm:grid grid-cols-[110px_1fr_160px_90px] gap-3 pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <span>Data</span>
+              <span>Cliente</span>
+              <span>Telefone</span>
+              <span>Origem</span>
+            </div>
+            {visits.map((v, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-1 sm:grid-cols-[110px_1fr_160px_90px] gap-1 sm:gap-3 py-2.5 items-center"
+              >
+                <span className="text-sm font-medium text-foreground sm:font-normal">
+                  {format(new Date(v.date + "T12:00:00"), "dd/MM/yyyy")}
+                </span>
+                <span className="text-sm text-foreground truncate">{v.name}</span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  {v.phone ? (
+                    <>
+                      <Phone className="w-3 h-3" />
+                      {formatPhoneMask(v.phone)}
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+                <span>
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${
+                      v.origin === "Reserva"
+                        ? "border-primary/30 text-primary"
+                        : "border-accent-foreground/30 text-accent-foreground"
+                    }`}
+                  >
+                    {v.origin}
+                  </Badge>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
