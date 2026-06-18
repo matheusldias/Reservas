@@ -24,6 +24,7 @@ import Customers from '@/pages/Customers';
 import ReservePage from '@/pages/public/ReservePage';
 import ChooseRestaurantPage from '@/pages/public/ChooseRestaurantPage';
 import QueuePage from '@/pages/public/QueuePage';
+import PrivacyPage from '@/pages/public/PrivacyPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -55,6 +56,7 @@ const AuthenticatedApp = () => {
       <Route path="/reservar" element={<ChooseRestaurantPage />} />
       <Route path="/reservar/:restaurantId" element={<ReservePage />} />
       <Route path="/fila/:restaurantId" element={<QueuePage />} />
+      <Route path="/privacidade" element={<PrivacyPage />} />
 
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
