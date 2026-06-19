@@ -49,6 +49,7 @@ export default function OperatorDashboard() {
     },
     enabled: !!restaurant,
     placeholderData: keepPreviousData,
+    refetchInterval: 30000, // plano B: atualiza a cada 30s mesmo se o realtime cair
   });
 
   const { data: todayWaitlist = [], refetch: refetchWaitlist } = useQuery({
@@ -65,6 +66,7 @@ export default function OperatorDashboard() {
       return data;
     },
     enabled: !!restaurant,
+    refetchInterval: 30000, // plano B: atualiza a cada 30s mesmo se o realtime cair
   });
 
   const allActiveWaitlist = todayWaitlist.filter(
